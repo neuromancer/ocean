@@ -1,0 +1,4 @@
+#!/bin/bash
+#/usr/bin/gdb -q -x /home/g/Codigo/ocean/ocean_gdb.py $@
+
+gdb -batch -q -ex "unset environment" -ex "set args $2" -x "/home/g/Codigo/ocean/ocean_gdb.py" $1

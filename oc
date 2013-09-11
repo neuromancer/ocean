@@ -1,0 +1,124 @@
+#!/usr/bin/python2.7
+
+import sys
+import os
+
+
+
+def GetCmd(s):
+  
+  if os.path.exists("path.txt"):
+    f = open("path.txt")
+    x = f.readline()
+    return x.replace("\n","")  
+  else: 
+    return s
+
+def GetArg(n):
+  
+  filename = "argv_"+str(n)+".symb"
+  #size = int(os.path.getsize(filename))
+  
+  data = open(filename).read()
+  size = len(data.split("\0")[0])
+  
+  #if (open(filename).read()[-1] == '\0'):
+  #  size = size - 1
+  
+  return (filename, n, size)
+
+def GetArgs():
+  #i = 1
+  r = []
+
+  for _,_,files in os.walk('.'):
+    for f in files:
+      #print f
+      for i in range(10):
+        #print "argv_"+str(i)
+        if ("argv_"+str(i)) in f:
+          x = GetArg(i)
+          if x[2] > 0: 
+            r.append(x)
+          break
+
+  r.sort()
+  return r
+
+def GetFile(f, source):
+  size = int(os.path.getsize(source))
+  return (f, source, size)
+
+def GetFiles():
+
+  r = []
+  stdinf = "file___dev__stdin.symb"
+  os
+  for _,_,files in os.walk('.'):
+    for f in files:
+      if (stdinf == f):
+        r.append(GetFile("/dev/stdin",stdinf))
+      elif ("file_" in f):
+        filename = f.replace(".symb","")
+        filename = filename.replace("file_","")        
+        filename = filename.replace(".__", "")
+        x = GetFile(filename,f) 
+        print x
+        if x[2] > 0:
+          r.append(x)
+
+  return r
+
+def PrepareArg((filename, i, size)):
+  return "\\\"$(cat "+filename+")\\\""
+
+def PrepareFile((filename, source, size)):
+  if filename == "/dev/stdin":
+    return "< \""+ source+"\""
+  else:
+    os.system("cp \""+source+"\" \""+filename+"\"" )
+    return ""
+  #return "($cat \'"+filename+"\' "+str(size)+" -file-default \'"+filename+"\' \'"+source+"\'"
+
+def Unbz2(filename):
+  dirf = filename.replace(".tar.bz2","")
+
+  os.system("tar -xf "+ filename)
+  #os.system("rm -f -R "+dirf)
+  #if (".bz2" in filename):
+  #  os.system("mkdir -p " + dirf)
+  #os.chdir(dirf)
+  #if (".bz2" in filename):
+  #  os.system("tar -xf bin.tgz")
+  #os.chdir("..")
+  return dirf
+
+#def patchCrash():
+#  os.chdir("crash")
+#  f = open("crash.sh", "rw+")
+#  b = f.read().replace("gdb --args", "/home/g/Codigo/ocean/ocean")
+#  f.seek(0)
+#  f.write(b)
+#  #print b
+  
+target = sys.argv[1]
+dirf = Unbz2(target)
+os.chdir(dirf)
+
+r = "ocean " + GetCmd(None) + " "
+
+os.chdir("crash")
+r = r + "\"" + " ".join(map(PrepareArg, GetArgs())) + " " + "".join(map(PrepareFile, GetFiles())) + "\""
+
+print r
+
+f = open("getdata.sh","w")
+f.write(r)
+#os.close(f)
+
+#x = open("crash.sh").read()
+
+
+#patchCrash()
+
+
