@@ -4,7 +4,6 @@ import sys
 import os
 
 
-
 def GetCmd(s):
   
   if os.path.exists("path.txt"):
@@ -40,9 +39,17 @@ def GetArgs():
           x = GetArg(i)
           if x[2] > 0: 
             r.append(x)
+          #else:
+          #  r.sort()
+          #  return r
           break
 
   r.sort()
+  for i in range(len(r)):
+    if r[i][1] <> i+1:
+      r = r[0:i]
+      break
+
   return r
 
 def GetFile(f, source):
@@ -63,7 +70,6 @@ def GetFiles():
         filename = filename.replace("file_","")        
         filename = filename.replace(".__", "")
         x = GetFile(filename,f) 
-        print x
         if x[2] > 0:
           r.append(x)
 
@@ -83,37 +89,29 @@ def PrepareFile((filename, source, size)):
 def Unbz2(filename):
   dirf = filename.replace(".tar.bz2","")
 
-  os.system("tar -xf "+ filename)
+  #os.system("tar -xf "+ filename)
   #os.system("rm -f -R "+dirf)
-  #if (".bz2" in filename):
-  #  os.system("mkdir -p " + dirf)
-  #os.chdir(dirf)
-  #if (".bz2" in filename):
-  #  os.system("tar -xf bin.tgz")
-  #os.chdir("..")
   return dirf
-
-#def patchCrash():
-#  os.chdir("crash")
-#  f = open("crash.sh", "rw+")
-#  b = f.read().replace("gdb --args", "/home/g/Codigo/ocean/ocean")
-#  f.seek(0)
-#  f.write(b)
-#  #print b
   
 target = sys.argv[1]
 dirf = Unbz2(target)
 os.chdir(dirf)
-
 r = "ocean " + GetCmd(None) + " "
 
 os.chdir("crash")
-r = r + "\"" + " ".join(map(PrepareArg, GetArgs())) + " " + "".join(map(PrepareFile, GetFiles())) + "\""
+r = r + "\"" + " ".join(map(PrepareArg, GetArgs())) + " " + "".join(map(PrepareFile, GetFiles())) + "> /dev/null 2> /dev/null\""
 
-print r
 
-f = open("getdata.sh","w")
-f.write(r)
+
+#print r
+
+with open('getdata.sh', 'w') as f:
+  f.write(r)
+  os.chmod("getdata.sh",0777)
+
+name = dirf.replace("-report","")
+os.system("printf "+name+",; ./getdata.sh > /dev/null; cat ocean.csv")
+
 #os.close(f)
 
 #x = open("crash.sh").read()
