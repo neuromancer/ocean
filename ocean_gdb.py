@@ -4,31 +4,31 @@ import sys
 import gdb
 import random
 
-#def parse_jmp_addr(raw_ins):
-#  jmp = raw_ins.split("\n")[1].split("\t")[1].split("<")[0]
-#  addr = jmp.split(" ")[-2]
+class Signal:
+  def __init__(self, name):
+    self.name = name
 
-#  return addr
+  def __str__(self):
+    return str(self.name)
 
-#def getRandomData(values, size):
-#  data = ""
-#  value_size = len(values)
-#  for i in range(size):
-#    data = data + values[random.randint(0,value_size-1)]
 
-#  return data
+class Syscall:
+  def __init__(self, name):
+    self.name = name
 
-#def setData(data, data_addr, size, size_addr):
+  def __str__(self):
+    return str(self.name)
 
-#  assert(len(data) == size)
-#  gdb.execute("set *(int*) ("+size_addr+") = (int) "+str(size)) #
+class Call:
+  def __init__(self, name):
+    self.name = name
 
-#  for i in range(size):
-    #print "set *(char*) ("+data_addr+"+"+str(i)+") = (char) "+str(ord(data[i]))
-#    gdb.execute("set *(char*) ("+data_addr+"+"+str(i)+") = (char) "+str(ord(data[i])))
+  def __str__(self):
+    return str(self.name)
 
-#def Init():
-#  gdb.execute("unset environment", to_string=True)
+
+
+## Events
 
 catched_calls = [ 
                  "strcpy", "strcpy@plt", "strcpy@got.plt",
@@ -53,37 +53,59 @@ def GetSyscall(cs):
   if ("(returned from syscall " in cs):
     s = cs.split("(returned from syscall ")[1]
     s = s.split(")")[0]
-    return s
+    return Syscall(s)
   else:
-    return ""
+    return None
 
 def GetSignal(cs):
   if ("Program received signal " in cs):
     s = cs.split("Program received signal ")[1]
     s = s.split(",")[0]
-    return s
+    return Signal(s)
   else:
-    return ""
+    return None
 
 def GetCall(cs):
   if (any(map(lambda f: f in cs, catched_calls))):
     s = cs.split(" in ")[1]
     s = s.split(" (")[0]
-    return s
+    return Call(s)
   else:
-    return ""
+    return None
 
 
-def getPath(size):
+## ??
+
+def isCrash(e):
+  return (str(e) == "SIGSEGV")
+
+
+def isBadEIP():
   
-  r = []
+  try:
+    gdb.execute("x/i $eip", to_string=True)
+    return True
+  except gdb.error:
+    return False  
+   
+
+## Analysis
+
+def Init():
   gdb.execute("set breakpoint pending on", to_string=True)
   gdb.execute("unset environment", to_string=True)
   gdb.execute("set environment MALLOC_CHECK_ = 0", to_string=True)
 
   gdb.execute("break __libc_start_main", to_string=True) 
   gdb.execute("start", to_string=True)  
+
+
+
+
+def getPath(size):
   
+  r = []
+  Init() 
   CatchSyscalls()
   CatchSignals()
   CatchCalls()
@@ -98,18 +120,27 @@ def getPath(size):
       syscall = GetSyscall(cs) 
       signal  = GetSignal(cs)
       call    = GetCall(cs)
-      #d = str(gdb.parse_and_eval("$eax")).split(" ")[0]
       e = str(gdb.parse_and_eval("$eip")).split(" ")[0]
 
-      if (syscall <> ''):
+      if (syscall <> None):
         r.append(syscall)
-      if (call <> ''):
+      if (call <> None):
         r.append(call)
-      if (signal <> ''):
+      if (signal <> None):
         r.append(signal)
+
     except gdb.error:
-      print e
-      break
+       pass
+    #  print e
+    #  break
+ 
+    if r <> []:
+      if (isCrash(r[-1])):
+        e = str(gdb.parse_and_eval("$eip")).split(" ")[0]
+        print e
+
+        break
+
 
     #addr = gdb.parse_and_eval("$eip")
 
