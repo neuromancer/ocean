@@ -3,88 +3,8 @@
 import sys
 import os
 
-
-def GetCmd(s):
-  
-  if os.path.exists("path.txt"):
-    f = open("path.txt")
-    x = f.readline()
-    return x.replace("\n","")  
-  else: 
-    return s
-
-def GetArg(n):
-  
-  filename = "argv_"+str(n)+".symb"
-  #size = int(os.path.getsize(filename))
-  
-  data = open(filename).read()
-  size = len(data.split("\0")[0])
-  
-  #if (open(filename).read()[-1] == '\0'):
-  #  size = size - 1
-  
-  return (filename, n, size)
-
-def GetArgs():
-  #i = 1
-  r = []
-
-  for _,_,files in os.walk('.'):
-    for f in files:
-      #print f
-      for i in range(10):
-        #print "argv_"+str(i)
-        if ("argv_"+str(i)) in f:
-          x = GetArg(i)
-          if x[2] > 0: 
-            r.append(x)
-          #else:
-          #  r.sort()
-          #  return r
-          break
-
-  r.sort()
-  for i in range(len(r)):
-    if r[i][1] <> i+1:
-      r = r[0:i]
-      break
-
-  return r
-
-def GetFile(f, source):
-  size = int(os.path.getsize(source))
-  return (f, source, size)
-
-def GetFiles():
-
-  r = []
-  stdinf = "file___dev__stdin.symb"
-  os
-  for _,_,files in os.walk('.'):
-    for f in files:
-      if (stdinf == f):
-        r.append(GetFile("/dev/stdin",stdinf))
-      elif ("file_" in f):
-        filename = f.replace(".symb","")
-        filename = filename.replace("file_","")        
-        filename = filename.replace(".__", "")
-        x = GetFile(filename,f) 
-        if x[2] > 0:
-          r.append(x)
-
-  return r
-
-def PrepareArg((filename, i, size)):
-  return "\\\"$(cat "+filename+")\\\""
-
-def PrepareFile((filename, source, size)):
-  if filename == "/dev/stdin":
-    return "< \""+ source+"\""
-  else:
-    os.system("cp \""+source+"\" \""+filename+"\"" )
-    return ""
-  #return "($cat \'"+filename+"\' "+str(size)+" -file-default \'"+filename+"\' \'"+source+"\'"
+from Detection import GetArgs, GetFiles, GetCmd
+from Mutation  import RandomMutator
 
 def Unbz2(filename):
   dirf = filename.replace(".tar.bz2","")
@@ -99,11 +19,21 @@ os.chdir(dirf)
 r = "ocean " + GetCmd(None) + " "
 
 os.chdir("crash")
-r = r + "\"" + " ".join(map(PrepareArg, GetArgs())) + " " + "".join(map(PrepareFile, GetFiles())) + "> /dev/null 2> /dev/null\""
+f = lambda i: i.PrepareData()
 
+args = GetArgs()
+files = GetFiles()
+mutator = RandomMutator(args[1])
 
+for i in range(0):
+  mutator.Mutate()
 
-#print r
+args[0] = mutator.Mutate()
+
+r = r + "\"" + " ".join(map(f,args)) + " " + "".join(map(f,files)) + " > /dev/null 2> /dev/null\""
+
+print r
+#os.system(r)
 
 with open('getdata.sh', 'w') as f:
   f.write(r)

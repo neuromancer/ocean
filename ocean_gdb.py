@@ -26,8 +26,6 @@ class Call:
   def __str__(self):
     return str(self.name)
 
-
-
 ## Events
 
 catched_calls = [ 
@@ -98,8 +96,6 @@ def Init():
 
   gdb.execute("break __libc_start_main", to_string=True) 
   gdb.execute("start", to_string=True)  
-
-
 
 
 def getPath(size):
