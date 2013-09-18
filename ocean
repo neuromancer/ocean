@@ -3,5 +3,5 @@
 
 gdb -q  \
        -ex "set args $2" \
-       -x "/home/g/Codigo/ocean/ocean_gdb.py" \
+       -x "/home/g/Codigo/ocean/ins_analyzer.py" \
         $1

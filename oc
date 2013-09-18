@@ -5,6 +5,7 @@ import os
 
 from Detection import GetArgs, GetFiles, GetCmd
 from Mutation  import RandomMutator
+from Run       import Runner
 
 def Unbz2(filename):
   dirf = filename.replace(".tar.bz2","")
@@ -16,7 +17,7 @@ def Unbz2(filename):
 target = sys.argv[1]
 dirf = Unbz2(target)
 os.chdir(dirf)
-r = "ocean " + GetCmd(None) + " "
+r = GetCmd(None) + " "
 
 os.chdir("crash")
 f = lambda i: i.PrepareData()
@@ -30,9 +31,12 @@ for i in range(0):
 
 args[0] = mutator.Mutate()
 
-r = r + "\"" + " ".join(map(f,args)) + " " + "".join(map(f,files)) + " > /dev/null 2> /dev/null\""
+r = r + " \"" + " ".join(map(f,args)) + " " + "".join(map(f,files)) + " > /dev/null 2> /dev/null\""
 
 print r
+Runner(["ocean",r] , 5).Run()
+
+exit(0)
 #os.system(r)
 
 with open('getdata.sh', 'w') as f:
