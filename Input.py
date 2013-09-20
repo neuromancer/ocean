@@ -52,7 +52,4 @@ class File(Input):
     return True
 
   def copy(self):
-    return self.__init__(self.filename, self.data)
-
-
-
+    return File(self.filename, self.data)    

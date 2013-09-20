@@ -5,6 +5,8 @@ import Input
 class Mutator:
   def Mutate(self):
     pass
+  def GetData(self):
+    return
 
 class RandomMutator(Mutator):
 
@@ -24,4 +26,35 @@ class RandomMutator(Mutator):
     input = self.input.copy()
     input.data = input.data[:i] + self.array[random.randint(0,self.size-1)] + input.data[i+1:]
     self.i = i + 1
-    return input 
+    return input
+
+  def GetInput(self):
+    return self.input.copy()
+
+class InputMutator:
+  def __init__(self, args, files, mutator):
+    assert(args <> [] or files <> [])
+    self.i = 0
+    self.arg_mutators  = []
+    self.file_mutators = []
+    #self.inputs = list(inputs)
+
+    for input in args:
+      self.arg_mutators.append(mutator(input))
+    for input in files:
+      self.file_mutators.append(mutator(input))
+      
+  def GetMutatedInput(self): 
+    f = lambda m: m.GetInput().PrepareData()
+
+    #args = GetArgs()
+    #files = GetFiles()
+    #mutator = RandomMutator(args[1])
+
+    #for i in range(0):
+    #  mutator.Mutate()
+
+    #args[0] = mutator.Mutate()
+
+    return " ".join(map(f,self.arg_mutators)) + " " + "".join(map(f,self.file_mutators)) #+ " > /dev/null 2> /dev/null\""
+

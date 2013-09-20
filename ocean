@@ -1,7 +1,11 @@
 #!/bin/bash
 #/usr/bin/gdb -q -x /home/g/Codigo/ocean/ocean_gdb.py $@
 
+
+echo 1: $1
+echo 2: $2
+
 gdb -q  \
        -ex "set args $2" \
-       -x "/home/g/Codigo/ocean/ins_analyzer.py" \
+       -x "/home/g/Codigo/ocean/ocean_gdb.py" \
         $1
