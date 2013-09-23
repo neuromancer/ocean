@@ -34,22 +34,23 @@ inputs = InputMutator(GetArgs(), GetFiles(),RandomMutator)
 #args[0] = mutator.Mutate()
 
 #r = r + " \"" + " ".join(map(f,args)) + " " + "".join(map(f,files)) + " > /dev/null 2> /dev/null\""
-r = " \"" + inputs.GetMutatedInput() + " > /dev/null 2> /dev/null\""
+#r = " \"" + inputs.GetMutatedInput() + " > /dev/null 2> /dev/null\""
 
-print r
-#exit(0)
 
-Runner(["ocean",cmd,r] , 5).Run()
+for i in range(3):
+  r = inputs.GetMutatedInput() + " > /dev/null 2> /dev/null"
+  print cmd, r
 
-exit(0)
+  Runner(["ocean",cmd,r] , None).Run()
+
 #os.system(r)
 
-with open('getdata.sh', 'w') as f:
-  f.write(r)
-  os.chmod("getdata.sh",0777)
+#with open('getdata.sh', 'w') as f:
+#  f.write(r)
+#  os.chmod("getdata.sh",0777)
 
-name = dirf.replace("-report","")
-os.system("printf "+name+",; ./getdata.sh > /dev/null; cat ocean.csv")
+#name = dirf.replace("-report","")
+#os.system("printf "+name+",; ./getdata.sh > /dev/null; cat ocean.csv")
 
 #os.close(f)
 

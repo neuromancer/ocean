@@ -65,7 +65,7 @@ def Init():
   gdb.execute("unset environment", to_string=True)
   gdb.execute("set environment MALLOC_CHECK_ = 0", to_string=True)
 
-  gdb.execute("break main", to_string=True) 
+  gdb.execute("break __libc_start_main", to_string=True) 
   gdb.execute("display/i $eip", to_string=True)  
   gdb.execute("start", to_string=True)  
 

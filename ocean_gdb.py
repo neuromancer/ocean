@@ -106,12 +106,11 @@ def getPath(size):
   CatchSignals()
   CatchCalls()
   e = None
-
   while True:
   
         #if not gdb.selected_inferior().is_valid():
     #  break
-    try: 
+    try:
       cs = gdb.execute("c", to_string=True)
       syscall = GetSyscall(cs) 
       signal  = GetSignal(cs)
@@ -126,15 +125,12 @@ def getPath(size):
         r.append(signal)
 
     except gdb.error:
-       pass
-    #  print e
-    #  break
+       break
  
     if r <> []:
       if (isCrash(r[-1])):
         e = str(gdb.parse_and_eval("$eip")).split(" ")[0]
         print e
-
         break
 
 
@@ -155,7 +151,6 @@ import random
 #Init()
 #gdb.execute("run")
 #print getPath(1)
-
 
 with open('ocean.csv', 'wb') as csvfile:
   pathwriter = csv.writer(csvfile)

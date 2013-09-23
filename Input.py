@@ -15,8 +15,8 @@ class Arg(Input):
     return str(self.data)
   
   def PrepareData(self):
-    return "\\\""+self.GetData()+"\\\""
-    #return "\""+self.GetData()+"\""
+    #return "\\\""+self.GetData()+"\\\""
+    return "\""+self.GetData()+"\""
 
   def IsValid(self):
     return self.size > 0
