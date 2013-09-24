@@ -1,10 +1,13 @@
-import subprocess
-import threading
+# -- coding: utf-8 --
 
-class Runner(threading.Thread):
+import subprocess
+import sys
+
+class Runner:
     def __init__(self, cmd, timeout):
         #threading.Thread.__init__(self)
-        self.cmd = map(lambda s: str(unicode(s)), cmd)
+        
+        self.cmd = cmd
         self.timeout = timeout
 
     def Run(self):

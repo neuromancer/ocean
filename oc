@@ -4,7 +4,7 @@ import sys
 import os
 
 from Detection import GetArgs, GetFiles, GetCmd
-from Mutation  import RandomMutator, InputMutator
+from Mutation  import RandomMutator, BruteForceMutator, InputMutator
 from Run       import Runner
 
 def Unbz2(filename):
@@ -20,7 +20,7 @@ os.chdir(dirf)
 cmd = GetCmd(None) 
 
 os.chdir("crash")
-inputs = InputMutator(GetArgs(), GetFiles(),RandomMutator)
+inputs = InputMutator(GetArgs(), GetFiles(),BruteForceMutator)
 
 #f = lambda i: i.PrepareData()
 
@@ -37,9 +37,9 @@ inputs = InputMutator(GetArgs(), GetFiles(),RandomMutator)
 #r = " \"" + inputs.GetMutatedInput() + " > /dev/null 2> /dev/null\""
 
 
-for i in range(3):
+for i in range(10000):
   r = inputs.GetMutatedInput() + " > /dev/null 2> /dev/null"
-  print cmd, r
+  #print cmd, r
 
   Runner(["ocean",cmd,r] , None).Run()
 

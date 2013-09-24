@@ -3,23 +3,22 @@ import random
 import Input
 
 class Mutator:
-  def Mutate(self):
-    pass
-  def GetData(self):
-    return
-
-class RandomMutator(Mutator):
-
   def __init__(self, input):
-    self.i = 5
+    self.i = 0
     self.input = input.copy()
-    print input, self.input
     if   isinstance(input, Input.Arg):
       self.array = map(chr, range(1,256))
     elif isinstance(input, Input.File):
       self.array = map(chr, range(0,256))
 
     self.size = len(self.array)
+
+  def Mutate(self):
+    pass
+  def GetData(self):
+    return
+
+class RandomMutator(Mutator):
 
   def Mutate(self):
     i = self.i
@@ -33,6 +32,25 @@ class RandomMutator(Mutator):
 
   def GetInput(self):
     return self.input.copy()
+
+class BruteForceMutator(Mutator):
+  
+  array_i = 0 
+  def Mutate(self):
+    i = self.i
+    input = self.input.copy()
+    #print self.array[rand]
+    input.data = input.data[:i] + self.array[self.array_i] + input.data[i+1:]
+    if (self.array_i == len(self.array)-1):
+      self.array_i = 0
+      self.i = self.i + 1
+    else:
+      self.array_i = self.array_i + 1
+    return input
+
+  def GetInput(self):
+    return self.input.copy()
+
 
 class InputMutator:
   def __init__(self, args, files, mutator):

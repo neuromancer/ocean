@@ -9,7 +9,10 @@ class Arg(Input):
     self.i = i
     
     self.data = str(data)
-    self.size = len(data.split("\0")[0])
+    if ("\0" in data):
+      self.data = self.data.split("\0")[0]
+
+    self.size = len(data)
 
   def GetData(self):
     return str(self.data)

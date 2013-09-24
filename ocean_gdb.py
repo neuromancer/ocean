@@ -34,7 +34,10 @@ catched_calls = [
                  "strlen", "strlen@plt", "strlen@got.plt",
                  "strcat", "strcat@plt", "strcat@got.plt",
                  # Memory manipulation                 
-                 "memcpy", "memcpy@plt", "memcpy@got.plt"
+                 "memcpy", "memcpy@plt", "memcpy@got.plt",
+                 # String comparation
+                 "strncmp", "strncmp@plt", "strncmp@got.plt"
+
                  ]
 
 def CatchSyscalls():
@@ -95,13 +98,20 @@ def Init():
   gdb.execute("set environment MALLOC_CHECK_ = 0", to_string=True)
 
   gdb.execute("break __libc_start_main", to_string=True) 
-  gdb.execute("start", to_string=True)  
+  try: 
+    gdb.execute("start", to_string=True)  
+    return True
+  except gdb.error:
+    return False
+
 
 
 def getPath(size):
   
   r = []
-  Init() 
+  if not Init():
+    print "Failed to start"
+    return []
   CatchSyscalls()
   CatchSignals()
   CatchCalls()
@@ -152,7 +162,7 @@ import random
 #gdb.execute("run")
 #print getPath(1)
 
-with open('ocean.csv', 'wb') as csvfile:
+with open('ocean.csv', 'a+') as csvfile:
   pathwriter = csv.writer(csvfile)
   path = getPath(1)
   pathwriter.writerow(path)
