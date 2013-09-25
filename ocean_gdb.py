@@ -4,6 +4,51 @@ import sys
 import gdb
 import random
 
+
+
+
+
+class Call:
+
+
+  def __init__(self, spec):
+
+    self.spec = str(spec)
+    x = spec.split(" ")
+    self.ret = x[0]
+    x = x[1].split("(")
+    self.name = x[0]
+    self.param_types = x[1].replace(");", "").split(",")
+
+  def __str__(self):
+
+    return str(self.ret + " " + self.name + "(" + ",".join(self.param_types) + ")")
+
+  def __GetSize__(self, ptype):
+    if   ptype == "int":
+      return 4
+    elif ptype == "unit":
+      return 4
+    elif ptype == "ulong":
+      return 4
+    elif ptype == "string":
+      return 4
+
+  def __DetectParam__(self, ptype, offset):
+   if ptype == "string":
+     print gdb.execute("x/s *($ebp+"+str(offset)+")")#, to_string=True)
+   return 1
+
+  def DetectParams(self):
+
+    offset = 8
+    for ptype in self.param_types:
+
+      self.__DetectParam__(ptype, offset)
+      offset = offset - self.__GetSize__(ptype)
+
+
+
 class Signal:
   def __init__(self, name):
     self.name = name
@@ -19,26 +64,40 @@ class Syscall:
   def __str__(self):
     return str(self.name)
 
-class Call:
-  def __init__(self, name):
-    self.name = name
 
-  def __str__(self):
-    return str(self.name)
+#class Call:
+#  def __init__(self, name):
+#    self.name = name
+
+#  def __str__(self):
+#    return str(self.name)
 
 ## Events
 
-catched_calls = [ 
+#def Unmangle(f):
+#  f = f.replace("@plt")
+
+catched_specs = ["int strncmp@plt(string,string,ulong);"]
+
+catched_calls = [
                  "strcpy", "strcpy@plt", "strcpy@got.plt",
                  "strncpy", "strncpy@plt", "strncpy@got.plt",
                  "strlen", "strlen@plt", "strlen@got.plt",
                  "strcat", "strcat@plt", "strcat@got.plt",
-                 # Memory manipulation                 
+                 # Memory manipulation
                  "memcpy", "memcpy@plt", "memcpy@got.plt",
                  # String comparation
                  "strncmp", "strncmp@plt", "strncmp@got.plt"
 
                  ]
+
+def FindInSpecs(name):
+  f = filter(lambda s: (" "+name+"(") in s, catched_specs)
+
+  if len(f) == 1:
+    return f[0]
+  else:
+    return None
 
 def CatchSyscalls():
   gdb.execute("catch syscall", to_string=True)
@@ -70,7 +129,17 @@ def GetCall(cs):
   if (any(map(lambda f: f in cs, catched_calls))):
     s = cs.split(" in ")[1]
     s = s.split(" (")[0]
-    return Call(s)
+    s = FindInSpecs(s)
+    #s = filter(lambda f: s in f, catched_specs)[0]
+    #print s
+    #if len(s) == 1:
+    if s <> None:
+
+      c = Call(s)
+      c.DetectParams()
+      return c
+    else:
+      return None
   else:
     return None
 
@@ -161,6 +230,8 @@ import random
 #Init()
 #gdb.execute("run")
 #print getPath(1)
+
+#print Function(")
 
 with open('ocean.csv', 'a+') as csvfile:
   pathwriter = csv.writer(csvfile)

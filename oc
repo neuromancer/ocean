@@ -37,7 +37,7 @@ inputs = InputMutator(GetArgs(), GetFiles(),BruteForceMutator)
 #r = " \"" + inputs.GetMutatedInput() + " > /dev/null 2> /dev/null\""
 
 
-for i in range(10000):
+for i in range(1):
   r = inputs.GetMutatedInput() + " > /dev/null 2> /dev/null"
   #print cmd, r
 
