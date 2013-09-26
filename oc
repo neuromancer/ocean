@@ -4,7 +4,7 @@ import sys
 import os
 
 from Detection import GetArgs, GetFiles, GetCmd
-from Mutation  import RandomMutator, BruteForceMutator, InputMutator
+from Mutation  import RandomMutator, BruteForceMutator, CompleteMutator, InputMutator
 from Run       import Runner
 
 def Unbz2(filename):
@@ -20,7 +20,7 @@ os.chdir(dirf)
 cmd = GetCmd(None) 
 
 os.chdir("crash")
-inputs = InputMutator(GetArgs(), GetFiles(),BruteForceMutator)
+inputs = InputMutator(GetArgs(), GetFiles(), CompleteMutator)
 
 #f = lambda i: i.PrepareData()
 

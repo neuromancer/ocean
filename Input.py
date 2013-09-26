@@ -16,10 +16,16 @@ class Arg(Input):
 
   def GetData(self):
     return str(self.data)
-  
+
+  def GetSize(self):
+    return len(self.data)
+
+  #def __BashEscape__(self, s):
+  #  return s.replace("'", "\\'")
+
   def PrepareData(self):
     #return "\\\""+self.GetData()+"\\\""
-    return "\""+self.GetData()+"\""
+    return "\'"+self.GetData()+"\'"
 
   def IsValid(self):
     return self.size > 0
@@ -38,6 +44,9 @@ class File(Input):
 
   def GetData(self):
     return str(self.data)
+
+  def GetSize(self):
+    return len(self.data)
 
   def PrepareData(self):
     if self.filename == "/dev/stdin":

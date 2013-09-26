@@ -18,6 +18,7 @@ class Mutator:
   def GetData(self):
     return
 
+
 class RandomMutator(Mutator):
 
   def Mutate(self):
@@ -32,6 +33,31 @@ class RandomMutator(Mutator):
 
   def GetInput(self):
     return self.input.copy()
+
+
+class CompleteMutator(Mutator):
+
+  def __init__(self, input):
+    Mutator.__init__(self, input)
+
+    self.array = filter(lambda b: b <> "'", self.array)
+    self.size -= 1
+
+  def Mutate(self):
+
+    input = self.input.copy()
+    ilen = input.GetSize()
+    input.data = ""
+    for i in range(ilen):
+      rand = random.randint(0,self.size-1)
+      input.data += self.array[rand]
+
+    return input
+
+  def GetInput(self):
+    return self.input.copy()
+
+
 
 class BruteForceMutator(Mutator):
   

@@ -11,9 +11,9 @@ class Runner:
         self.timeout = timeout
 
     def Run(self):
-        print self.cmd
-        self.p = subprocess.Popen(self.cmd)
-        self.p.wait()
+        #print self.cmd
+        self.p = subprocess.call(self.cmd, shell=False)
+        #self.p.wait()
         #self.join(self.timeout)
 
         #if self.is_alive():

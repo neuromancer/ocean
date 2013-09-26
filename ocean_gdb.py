@@ -1,15 +1,10 @@
 #!/usr/bin/gdb -x
 
-import sys
+
 import gdb
-import random
-
-
-
 
 
 class Call:
-
 
   def __init__(self, spec):
 
@@ -18,11 +13,14 @@ class Call:
     self.ret = x[0]
     x = x[1].split("(")
     self.name = x[0]
-    self.param_types = x[1].replace(");", "").split(",")
+    self.param_types  = x[1].replace(");", "").split(",")
+    self.param_values = []
 
   def __str__(self):
-
-    return str(self.ret + " " + self.name + "(" + ",".join(self.param_types) + ")")
+    if self.param_values == []:
+      return str(self.ret + " " + self.name + "(" + ",".join(self.param_types) + ")")
+    else:
+      return str(self.ret + " " + self.name + "(" + ",".join(self.param_values) + ")")
 
   def __GetSize__(self, ptype):
     if   ptype == "int":
@@ -36,16 +34,20 @@ class Call:
 
   def __DetectParam__(self, ptype, offset):
    if ptype == "string":
-     print gdb.execute("x/s *($ebp+"+str(offset)+")")#, to_string=True)
-   return 1
+     raw = gdb.execute("x/s *((int) $esp+"+str(offset)+")", to_string=True)
+     raw = raw.replace("\n","").split("\"")[1]
+     return raw
+   else:
+     return ""
 
   def DetectParams(self):
 
-    offset = 8
+    offset = 4
     for ptype in self.param_types:
 
-      self.__DetectParam__(ptype, offset)
-      offset = offset - self.__GetSize__(ptype)
+      x = self.__DetectParam__(ptype, offset)
+      self.param_values.append(x)
+      offset = offset + self.__GetSize__(ptype)
 
 
 
