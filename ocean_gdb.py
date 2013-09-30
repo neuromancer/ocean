@@ -1,6 +1,5 @@
 #!/usr/bin/gdb -x
 
-
 import gdb
 
 
@@ -20,7 +19,7 @@ class Call:
     if self.param_values == []:
       return str(self.ret + " " + self.name + "(" + ",".join(self.param_types) + ")")
     else:
-      return str(self.ret + " " + self.name + "(" + ",".join(self.param_values) + ")")
+      return repr([self.ret, self.name] +self.param_values)
 
   def __GetSize__(self, ptype):
     if   ptype == "int":
@@ -37,6 +36,10 @@ class Call:
      raw = gdb.execute("x/s *((int) $esp+"+str(offset)+")", to_string=True)
      raw = raw.replace("\n","").split("\"")[1]
      return raw
+   elif (ptype == "ulong"):
+     raw = gdb.execute("x/x $esp+"+str(offset), to_string=True)
+     raw = raw.replace("\n","").split("\t")[1]
+     return int(raw, 16)
    else:
      return ""
 
@@ -47,7 +50,7 @@ class Call:
 
       x = self.__DetectParam__(ptype, offset)
       self.param_values.append(x)
-      offset = offset + self.__GetSize__(ptype)
+      offset += self.__GetSize__(ptype)
 
 
 

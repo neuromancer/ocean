@@ -43,15 +43,24 @@ class CompleteMutator(Mutator):
     self.array = filter(lambda b: b <> "'", self.array)
     self.size -= 1
 
-  def Mutate(self):
-
-    input = self.input.copy()
+    #input = self.input.copy()
     ilen = input.GetSize()
-    input.data = ""
+    self.input.data = ""
     for i in range(ilen):
       rand = random.randint(0,self.size-1)
-      input.data += self.array[rand]
+      self.input.data += self.array[rand]
 
+    #self.input = input
+
+
+  def Mutate(self):
+    i = self.i
+    rand = random.randint(0,self.size-1)
+    input = self.input.copy()
+    #print self.array[rand]
+    input.data = input.data[:i] + self.array[rand] + input.data[i+1:]
+    #print input.data
+    self.i = (i + 1) % len(input.data)
     return input
 
   def GetInput(self):
@@ -113,5 +122,6 @@ class InputMutator:
 
     #args[0] = mutator.Mutate()
 
-    return " ".join(map(f,self.arg_mutators)) + " " + "".join(map(f,self.file_mutators)) #+ " > /dev/null 2> /dev/null\""
+    #return " ".join(map(f,self.arg_mutators)) + " " + "".join(map(f,self.file_mutators))
+    #+ " > /dev/null 2> /dev/null\""
 
