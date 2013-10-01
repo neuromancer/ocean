@@ -13,4 +13,6 @@ with open(sys.argv[1]) as csvfile:
       if "[" in raw_event and "]" in raw_event:
         events.append(Event.GetEvent(raw_event))
 
-print events
+for event in events:
+  print event.GetVector()
+
