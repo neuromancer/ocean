@@ -1,6 +1,8 @@
 import ast
 from sklearn.feature_extraction.text import HashingVectorizer
 from scipy.sparse import hstack
+from scipy.linalg import norm
+
 
 class Event:
   def __init__(self):
@@ -13,7 +15,7 @@ class Call(Event):
     self.ret = rlist[0]
     self.name = rlist[1]
     self.param_values = rlist[2:]
-    self.hasher = HashingVectorizer(encoding='iso-8859-15', n_features=512,
+    self.hasher = HashingVectorizer(encoding='iso-8859-15', n_features=128,
                                     analyzer='char', tokenizer=lambda x: [x],
                                     ngram_range=(1, 3), lowercase=False)
 

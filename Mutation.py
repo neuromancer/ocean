@@ -67,7 +67,6 @@ class CompleteMutator(Mutator):
     return self.input.copy()
 
 
-
 class BruteForceMutator(Mutator):
   
   array_i = 0 
