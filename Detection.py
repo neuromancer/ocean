@@ -2,6 +2,14 @@ import os
 
 from Input import Arg, File
 
+def GetDir(filename):
+  dirf = filename.replace(".tar.bz2","")
+
+  #os.system("tar -xf "+ filename)
+  #os.system("rm -f -R "+dirf)
+  return dirf
+
+
 def GetCmd(s):
   
   if os.path.exists("path.txt"):

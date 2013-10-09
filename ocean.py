@@ -1,11 +1,14 @@
 #!/usr/bin/python
 
+
+import os
+import argparse
+
 from ptrace import PtraceError
 from ptrace.debugger import (PtraceDebugger, Application,
     ProcessExit, NewProcessEvent, ProcessSignal,
     ProcessExecution, ProcessError)
-from optparse import OptionParser
-from os import getpid
+
 from sys import stdout, stderr, exit
 from logging import getLogger, info, warning, error
 from ptrace.version import VERSION, WEBSITE
@@ -24,121 +27,58 @@ from errno import ESRCH
 from ptrace.cpu_info import CPU_POWERPC
 from ptrace.debugger import ChildError
 from ptrace.debugger.memory_mapping import readProcessMappings
-# Set the path to the executable to debug
-#exe = sys.argv[1]
 
-_READELF = '/usr/bin/readelf'
-_OBJDUMP = '/usr/bin/objdump'
 
-#def die(s):
-#  print s
-#  exit(-1)
+from Detection import GetArgs, GetFiles, GetCmd, GetDir
+from Mutation  import RandomMutator, BruteForceMutator, CompleteMutator, InputMutator
 
-#def check(f):
-#  import os
-#  if not (os.access(f, os.X_OK) and os.path.isfile(f)):
-#    die('Executable %s needed for readelf.py, please install binutils' % f)
-#
-#check(_READELF)
-#check(_OBJDUMP)
-#
-#def plt_got(path):
-#  plt, got = dict(), dict()
-#
-#  cmd = [_OBJDUMP, '-d', path]
-#  out = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
-#  got32 = '[^j]*jmp\s+\*0x(\S+)'
-#  got64 = '[^#]*#\s+(\S+)'
-#  lines = re.findall('([a-fA-F0-9]+)\s+<([^@<]+)@plt>:(%s|%s)' % (got32, got64), out)
-#
-#  for addr, name, _, gotaddr32, gotaddr64 in lines:
-#     addr = int(addr, 16)
-#     gotaddr = int(gotaddr32 or gotaddr64, 16)
-#     plt[name] = addr
-#     got[name] = gotaddr
-#
-#  return plt, got
+from ELF import ELF
+from Run import Launch
 
-#def symbols(file):
-#    import re, subprocess
-#    symbols = {}
-#    # -s : symbol table
-#    cmd = [_READELF, '-s', file]
-#    out = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
-#    field = '\s+(\S+)'
-#    lines = re.findall('^\s+\d+:' + field * 7 + '$', out, re.MULTILINE)
-#
-#    for addr, size, type, _bind, _vis, _ndx, name in lines:
-#        addr = int(addr, 16)
-#        size = int(size, 10)
-#        if addr <> 0 and name <> '':
-#            symbols[name] = {'addr': addr,
-#                             'size': size,
-#                             'type': type,
-#                             }
-#    return symbols
-
-#plt, got = plt_got('/bin/ls')
-#
-#for symbol,val in plt.items():
-#  print symbol, "0x%.8x" % val
-#
-#exit(0)
-
-from ptrace import PtraceError
-from ptrace.debugger import (PtraceDebugger, Application,
-    ProcessExit, ProcessSignal, NewProcessEvent, ProcessExecution, Breakpoint)
-from ptrace.syscall import (SYSCALL_NAMES, SYSCALL_PROTOTYPES,
-    FILENAME_ARGUMENTS, SOCKET_SYSCALL_NAMES)
-from ptrace.func_call import FunctionCallOptions
-from sys import stderr, exit
-from optparse import OptionParser
-from logging import getLogger, error
-from ptrace.syscall.socketcall_constants import SOCKETCALL
-from ptrace.compatibility import any
-from ptrace.error import PTRACE_ERRORS, writeError
-from ptrace.ctypes_tools import formatAddress
-import re
-
-class Gdb(Application):
+class App(Application):
     def __init__(self):
-        Application.__init__(self)
+
+        Application.__init__(self) # no effect
 
         # Parse self.options
         self.parseOptions()
 
-        # Setup output (log)
-        self.setupLog()
-
-        self.last_signal = {}
-
-        # We assume user wants all possible information
-        self.syscall_options = FunctionCallOptions(
-            write_types=True,
-            write_argname=True,
-            write_address=True,
-        )
+        self.input = None
 
         # FIXME: Remove self.breaks!
         self.breaks = dict()
 
         self.followterms = []
 
-    def setupLog(self):
-        self._setupLog(stdout)
-
     def parseOptions(self):
-        parser = OptionParser(usage="%prog [options] -- program [arg1 arg2 ...]")
-        self.createCommonOptions(parser)
-        self.createLogOptions(parser)
-        self.options, self.program = parser.parse_args()
+        parser = argparse.ArgumentParser(description='xxx')
+        parser.add_argument("testcase", help="", type=str, default=None)
+        self.options = parser.parse_args()
+        print self.options.testcase
 
-        if self.options.pid is None and not self.program:
-            parser.print_help()
-            exit(1)
+    def detectTestcase(self):
 
-        self.processOptions()
-        self.show_pid = self.options.fork
+        dirf = GetDir(self.options.testcase)
+        os.chdir(dirf)
+        self.program = GetCmd(None)
+        os.chdir("crash")
+        return InputMutator(GetArgs(), GetFiles(), BruteForceMutator)
+
+
+    def createProcess(self):
+
+        pid = Launch(self.program, self.options.no_stdout, dict())
+        is_attached = True
+
+        try:
+            return self.debugger.addProcess(pid, is_attached=is_attached)
+        except (ProcessExit, PtraceError), err:
+            if isinstance(err, PtraceError) \
+            and err.errno == EPERM:
+                error("ERROR: You are not allowed to trace process %s (permission denied or process already traced)" % pid)
+            else:
+                error("ERROR: Process can no be attached! %s" % err)
+        return None
 
     def _continueProcess(self, process, signum=None):
         if not signum and process in self.last_signal:
@@ -173,8 +113,8 @@ class Gdb(Application):
                 ip -= 1
             breakpoint = self.process.findBreakpoint(ip)
             if breakpoint:
-                error("Stopped at %s" % breakpoint)
-                breakpoint.desinstall(set_ip=True)
+                error("Stopped at %s" % self.elf.FindAddrInPlt(breakpoint.address))
+                #breakpoint.desinstall(set_ip=True)
         else:
             self.processSignal(signal)
         return None
@@ -204,7 +144,7 @@ class Gdb(Application):
         return None
 
     def runDebugger(self):
-        self.setupDebugger()
+        #self.setupDebugger()
 
         # Create new process
         try:
@@ -215,11 +155,12 @@ class Gdb(Application):
         if not self.process:
             return
 
-        # Trace syscalls
-        self.invite = '(gdb) '
-        self.previous_command = None
+        # Parse ELF
+        self.elf = ELF(self.program[0])
 
-        self.breakpoint(0x08049950)
+        # Set the breakpoints
+        self.breakpoint(self.elf.FindFuncInPlt("memcpy"))
+        self.breakpoint(self.elf.FindFuncInPlt("strlen"))
 
         while True:
             if not self.debugger:
@@ -239,15 +180,19 @@ class Gdb(Application):
 
     def main(self):
         self.debugger = PtraceDebugger()
-        try:
-            self.runDebugger()
-        except KeyboardInterrupt:
-            error("Interrupt debugger: quit!")
-        except PTRACE_ERRORS, err:
-            writeError(getLogger(), err, "Debugger error")
-        self.process = None
+
+        
+        print self.detectTestcase().GetMutatedInput()
+        #try:
+        #    self.runDebugger()
+        #except KeyboardInterrupt:
+        #    error("Interrupt debugger: quit!")
+        #except PTRACE_ERRORS, err:
+        #    writeError(getLogger(), err, "Debugger error")
+        #
+        #self.process = None
         self.debugger.quit()
         error("Quit gdb.")
 
 if __name__ == "__main__":
-    Gdb().main()
+    App().main()
