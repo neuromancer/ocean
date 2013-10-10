@@ -63,8 +63,14 @@ class ELF:
     self.addr2name = dict()
 
     for (name, addr) in self.name2addr.items():
-      #print (addr, name)
       self.addr2name[addr] = name
+
+    self.name2func = self.got
+    self.func2name = dict()
+
+    for (name, addr) in self.name2func.items():
+      print name, hex(addr)
+      self.func2name[addr] = name
 
   def FindFuncInPlt(self, name):
 
@@ -77,5 +83,19 @@ class ELF:
     #print addr
     if addr in self.addr2name:
       return self.addr2name[addr]
+    else:
+      return None
+
+  def FindFuncInGot(self, name):
+
+    if name in self.name2addr:
+      return self.name2func[name]
+    else:
+      return None
+
+  def FindAddrInGot(self, addr):
+    #print addr
+    if addr in self.addr2name:
+      return self.func2name[addr]
     else:
       return None

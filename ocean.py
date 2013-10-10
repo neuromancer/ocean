@@ -32,18 +32,22 @@ from ptrace.debugger.memory_mapping import readProcessMappings
 from Detection import GetArgs, GetFiles, GetCmd, GetDir
 from Mutation  import RandomMutator, BruteForceMutator, CompleteMutator, InputMutator
 
+from Event import StrncmpCall
+
 from ELF import ELF
 from Run import Launch
 
 class App(Application):
     def __init__(self):
 
-        Application.__init__(self) # no effect
+        Application.__init__(self)  # no effect
 
         # Parse self.options
         self.parseOptions()
 
-        self.input = None
+        #self.input = None
+        self.last_signal = {}
+        self.events = []
 
         # FIXME: Remove self.breaks!
         self.breaks = dict()
@@ -60,14 +64,37 @@ class App(Application):
 
         dirf = GetDir(self.options.testcase)
         os.chdir(dirf)
-        self.program = GetCmd(None)
+        program = GetCmd(None)
         os.chdir("crash")
-        return InputMutator(GetArgs(), GetFiles(), BruteForceMutator)
+        #print GetArgs()
+        return program, InputMutator(GetArgs(), GetFiles(), BruteForceMutator)
+
+    def createEvent(self, signal):
+
+        # Hit breakpoint?
+        if signal.signum == SIGTRAP:
+            ip = self.process.getInstrPointer()
+            if not CPU_POWERPC:
+                # Go before "INT 3" instruction
+                ip -= 1
+            breakpoint = self.process.findBreakpoint(ip)
+            if breakpoint:
+                name = self.elf.FindAddrInPlt(breakpoint.address)
+                call =  StrncmpCall(name)
+                call.DetectParams(self.process)
+                return call
+                #error("Stopped at %s" %
+                #breakpoint.desinstall(set_ip=True)
+        else:
+            pass
+            #self.processSignal(signal)
+        return None
 
 
-    def createProcess(self):
 
-        pid = Launch(self.program, self.options.no_stdout, dict())
+    def createProcess(self, cmd, no_stdout):
+
+        pid = Launch(cmd, no_stdout, dict())
         is_attached = True
 
         try:
@@ -105,19 +132,8 @@ class App(Application):
         signal = self.debugger.waitSignals()
         process = signal.process
 
-        # Hit breakpoint?
-        if signal.signum == SIGTRAP:
-            ip = self.process.getInstrPointer()
-            if not CPU_POWERPC:
-                # Go before "INT 3" instruction
-                ip -= 1
-            breakpoint = self.process.findBreakpoint(ip)
-            if breakpoint:
-                error("Stopped at %s" % self.elf.FindAddrInPlt(breakpoint.address))
-                #breakpoint.desinstall(set_ip=True)
-        else:
-            self.processSignal(signal)
-        return None
+        self.events.append(self.createEvent(signal))
+
 
     def readInstrSize(self, address, default_size=None):
         if not HAS_DISASSEMBLER:
@@ -143,12 +159,12 @@ class App(Application):
         error("New breakpoint: %s" % bp)
         return None
 
-    def runDebugger(self):
+    def runProcess(self, cmd, no_stdout):
         #self.setupDebugger()
 
         # Create new process
         try:
-            self.process = self.createProcess()
+            self.process = self.createProcess(cmd, no_stdout)
         except ChildError, err:
             writeError(getLogger(), err, "Unable to create child process")
             return
@@ -156,11 +172,11 @@ class App(Application):
             return
 
         # Parse ELF
-        self.elf = ELF(self.program[0])
+        #self.elf = ELF(self.program[0])
 
         # Set the breakpoints
-        self.breakpoint(self.elf.FindFuncInPlt("memcpy"))
-        self.breakpoint(self.elf.FindFuncInPlt("strlen"))
+        self.breakpoint(self.elf.FindFuncInPlt("strncmp"))
+        #self.breakpoint(self.elf.FindFuncInPlt("strlen"))
 
         while True:
             if not self.debugger:
@@ -180,17 +196,24 @@ class App(Application):
 
     def main(self):
         self.debugger = PtraceDebugger()
+        program, inputs = self.detectTestcase()
 
-        
-        print self.detectTestcase().GetMutatedInput()
+        # Parse ELF
+        self.elf = ELF(program)
+        #print inputs.GetMutatedInput()
+        #print [program]
+        no_stdout = False
+
         #try:
-        #    self.runDebugger()
+        self.runProcess([program, inputs.GetMutatedInput()], no_stdout)
+        for event in self.events:
+          print event.GetVector()
         #except KeyboardInterrupt:
         #    error("Interrupt debugger: quit!")
         #except PTRACE_ERRORS, err:
         #    writeError(getLogger(), err, "Debugger error")
-        #
-        #self.process = None
+
+        self.process = None
         self.debugger.quit()
         error("Quit gdb.")
 

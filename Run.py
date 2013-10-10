@@ -3,6 +3,8 @@
 from ptrace.debugger.child import createChild
 
 def Launch(cmd, no_stdout, env):
+  print "cmd:", cmd
+
   return createChild(cmd, no_stdout, env)
 
 
