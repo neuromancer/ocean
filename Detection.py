@@ -15,7 +15,7 @@ def GetCmd(s):
   if os.path.exists("path.txt"):
     f = open("path.txt")
     x = f.readline()
-    return x.replace("\n","")  
+    return x.replace("\n","").strip(" ")
   else: 
     return s
 
@@ -36,6 +36,7 @@ def GetArgs():
         #print "argv_"+str(i)
         if ("argv_"+str(i)) in f:
           x = GetArg(i)
+          #print list(x.data), x.IsValid()
           if x.IsValid(): 
             r.append(x)
           #else:
@@ -44,11 +45,13 @@ def GetArgs():
           break
 
   r.sort()
+  #print r
   for i in range(len(r)):
     if r[i].i <> i+1:
       r = r[0:i]
       break
 
+  #print r
   return r
 
 def GetFile(filename, source):
@@ -60,7 +63,7 @@ def GetFiles():
 
   r = []
   stdinf = "file___dev__stdin.symb"
-  os
+
   for _,_,files in os.walk('.'):
     for f in files:
       if (stdinf == f):

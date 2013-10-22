@@ -3,6 +3,8 @@ import ast
 from ptrace.ctypes_tools import bytes2word
 
 from sklearn.feature_extraction.text import HashingVectorizer
+from sklearn.preprocessing import normalize
+
 from scipy.sparse import hstack
 from scipy.linalg import norm
 
@@ -40,8 +42,10 @@ class Call(Event):
     self.name = str(name)
     self.param_types = list(spec[1:])
     self.param_values = []
+    self.dim = 256
+    self.v = None
 
-    self.hasher = HashingVectorizer(encoding='iso-8859-15', n_features=128,
+    self.hasher = HashingVectorizer(encoding='iso-8859-15', n_features=self.dim / 2,
                                     analyzer='char', tokenizer=lambda x: [x],
                                     ngram_range=(1, 3), lowercase=False)
 
@@ -87,8 +91,11 @@ class Call(Event):
       offset += self.__GetSize__(ptype)
 
   def GetVector(self):
-    vs = self.hasher.transform(self.param_values[0:2])
-    return hstack(list(vs))
+    if self.v is None:
+      vs = self.hasher.transform(self.param_values[0:2])
+      self.v = normalize(hstack(list(vs)), norm='l1', axis=1)
+
+    return self.v
 
 class Signal(Event):
   def __init__(self, name):
@@ -96,6 +103,15 @@ class Signal(Event):
 
   def __str__(self):
     return str(self.name)
+
+class Exit(Event):
+  def __init__(self, code):
+    self.code = code
+    self.name = "Exit with "+str(code)
+
+  def __str__(self):
+    return str(self.name)
+
 
 
 class Syscall(Event):

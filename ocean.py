@@ -3,6 +3,7 @@
 
 import os
 import argparse
+import csv
 
 from ptrace import PtraceError
 from ptrace.debugger import (PtraceDebugger, Application,
@@ -21,32 +22,41 @@ from ptrace.process_tools import dumpProcessInfo
 from ptrace.tools import inverseDict
 from ptrace.func_call import FunctionCallOptions
 from ptrace.signames import signalName, SIGNAMES
-from signal import SIGTRAP, SIGINT
+from signal import SIGTRAP, SIGSEGV
 from ptrace.terminal import enableEchoMode, terminalWidth
-from errno import ESRCH
+from errno import ESRCH, EPERM
 from ptrace.cpu_info import CPU_POWERPC
 from ptrace.debugger import ChildError
 from ptrace.debugger.memory_mapping import readProcessMappings
 
 
 from Detection import GetArgs, GetFiles, GetCmd, GetDir
-from Mutation  import RandomMutator, BruteForceMutator, CompleteMutator, InputMutator
+#from Mutation  import RandomMutator, BruteForceMutator, CompleteMutator, InputMutator
+from Mutation  import BruteForceMutator, InputMutator
 
-from Event import StrncmpCall
+from Event import Exit, Signal, StrncmpCall
 
 from ELF import ELF
 from Run import Launch
 
 class App(Application):
-    def __init__(self):
+    def __init__(self, program, outdir, no_stdout = False):
 
         Application.__init__(self)  # no effect
 
-        # Parse self.options
-        self.parseOptions()
+        self.program = str(program)
+        self.name = self.program.split("/")[-1]
+        self.outdir = str(outdir)
+        self.no_stdout = no_stdout
 
-        #self.input = None
+
+        self.process = None
+
+        # Parse ELF
+        self.elf = ELF(self.program)
+
         self.last_signal = {}
+        self.crashed = False
         self.events = []
 
         # FIXME: Remove self.breaks!
@@ -54,20 +64,9 @@ class App(Application):
 
         self.followterms = []
 
-    def parseOptions(self):
-        parser = argparse.ArgumentParser(description='xxx')
-        parser.add_argument("testcase", help="", type=str, default=None)
-        self.options = parser.parse_args()
-        print self.options.testcase
+        with open(self.outdir+"/"+self.name+".csv", "w+") as f:
+          f.write("")
 
-    def detectTestcase(self):
-
-        dirf = GetDir(self.options.testcase)
-        os.chdir(dirf)
-        program = GetCmd(None)
-        os.chdir("crash")
-        #print GetArgs()
-        return program, InputMutator(GetArgs(), GetFiles(), BruteForceMutator)
 
     def createEvent(self, signal):
 
@@ -86,8 +85,9 @@ class App(Application):
                 #error("Stopped at %s" %
                 #breakpoint.desinstall(set_ip=True)
         else:
-            pass
-            #self.processSignal(signal)
+          self.crashed = True
+          return Signal(signal)
+          #self.processSignal(signal)
         return None
 
 
@@ -95,6 +95,7 @@ class App(Application):
     def createProcess(self, cmd, no_stdout):
 
         pid = Launch(cmd, no_stdout, dict())
+        #self.ofiles = list(files)
         is_attached = True
 
         try:
@@ -120,6 +121,7 @@ class App(Application):
                 pass
         else:
             process.cont()
+
     def cont(self, signum=None):
         for process in self.debugger:
             process.syscall_state.clear()
@@ -156,37 +158,38 @@ class App(Application):
         except PtraceError, err:
             return "Unable to set breakpoint at %s: %s" % (
                 formatAddress(address), err)
-        error("New breakpoint: %s" % bp)
+        #error("New breakpoint: %s" % bp)
         return None
 
-    def runProcess(self, cmd, no_stdout):
-        #self.setupDebugger()
+    def runProcess(self, cmd):
 
         # Create new process
         try:
-            self.process = self.createProcess(cmd, no_stdout)
+            self.process = self.createProcess(cmd, self.no_stdout)
+            self.crashed = False
         except ChildError, err:
             writeError(getLogger(), err, "Unable to create child process")
             return
         if not self.process:
             return
 
-        # Parse ELF
-        #self.elf = ELF(self.program[0])
 
         # Set the breakpoints
-        self.breakpoint(self.elf.FindFuncInPlt("strncmp"))
+        #self.breakpoint(self.elf.FindFuncInPlt("strncmp"))
         #self.breakpoint(self.elf.FindFuncInPlt("strlen"))
 
         while True:
-            if not self.debugger:
+            if not self.debugger or self.crashed:
                 # There is no more process: quit
                 return
 
             try:
               self.cont()
             except ProcessExit, event:
-              error(event)
+              self.events.append(Exit(event.exitcode))
+
+              pass
+              #error(event)
               #self.nextProcess()
 
             #done = True
@@ -194,28 +197,72 @@ class App(Application):
             #    return
 
 
-    def main(self):
+    def getData(self, delta, inputs):
+        self.events = []
         self.debugger = PtraceDebugger()
-        program, inputs = self.detectTestcase()
-
-        # Parse ELF
-        self.elf = ELF(program)
-        #print inputs.GetMutatedInput()
-        #print [program]
-        no_stdout = False
 
         #try:
-        self.runProcess([program, inputs.GetMutatedInput()], no_stdout)
-        for event in self.events:
-          print event.GetVector()
+        self.runProcess([self.program]+inputs)
+        with open(self.outdir+"/"+self.name+".csv", "a+") as csvfile:
+          eventwriter = csv.writer(csvfile, delimiter='\t', quotechar='\'')
+          eventwriter.writerow(list(delta)+self.events)
+
+
+        #
+        #for x in delta:
+        #  print repr(x), "\t",
+        #
+        #print  "\t",
+        #
+        #for event in self.events:
+        #  print event,
+        #print ""
+        #  #print event.GetVector()
         #except KeyboardInterrupt:
         #    error("Interrupt debugger: quit!")
         #except PTRACE_ERRORS, err:
         #    writeError(getLogger(), err, "Debugger error")
 
+        self.process.terminate()
+        self.process.detach()
+
         self.process = None
-        self.debugger.quit()
-        error("Quit gdb.")
+        #for desc in self.ofiles:
+        #  os.close(desc)
+        #self.debugger.quit()
+
+        #error("Quit gdb.")
+
 
 if __name__ == "__main__":
-    App().main()
+    # Arguments
+    parser = argparse.ArgumentParser(description='xxx')
+    parser.add_argument("testcase", help="Testcase to use", type=str, default=None)
+    parser.add_argument("outdir", help="Output directory to use", type=str, default=".")
+    parser.add_argument("--no-stdout",
+                        help="Use /dev/null as stdout/stderr, or close stdout and stderr if /dev/null doesn't exist",
+                        action="store_true", default=False)
+
+    options = parser.parse_args()
+    testcase = options.testcase
+    outdir = options.outdir
+    no_stdout = options.no_stdout
+
+
+    os.chdir(GetDir(testcase))
+    program = GetCmd(None)
+    os.chdir("crash")
+    inputs = InputMutator(GetArgs(), GetFiles(), BruteForceMutator)
+
+
+    app = App(program, no_stdout=no_stdout, outdir = outdir)
+    i = 10
+
+    #app.getData(input.GetInput(), inputs.GetDelta())
+
+    for delta, mutated in inputs:
+      app.getData(delta, mutated)
+
+    #for i in range(100):
+      #print inputs.GetInput()
+      #app.getData(inputs.GetMutatedInput())

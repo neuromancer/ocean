@@ -69,7 +69,6 @@ class ELF:
     self.func2name = dict()
 
     for (name, addr) in self.name2func.items():
-      print name, hex(addr)
       self.func2name[addr] = name
 
   def FindFuncInPlt(self, name):

@@ -1,10 +1,29 @@
 # -- coding: utf-8 --
 
+import os
+
 from ptrace.debugger.child import createChild
+from os import dup2, close, open as fopen, O_RDONLY
+from sys import stdin
+
 
 def Launch(cmd, no_stdout, env):
-  print "cmd:", cmd
 
+  if cmd[-1][0] == "<":
+    filename = cmd[-1].replace("< ", "")
+
+    try:
+      close(3)
+    except OSError:
+      pass
+
+      desc = fopen(filename,O_RDONLY)
+      dup2(desc, stdin.fileno())
+      #close(desc)
+
+    cmd = cmd[:-1]
+
+  #print "cmd:", cmd
   return createChild(cmd, no_stdout, env)
 
 

@@ -6,20 +6,27 @@ class Mutator:
   def __init__(self, input):
     self.i = 0
     self.input = input.copy()
-    if   isinstance(input, Input.Arg):
-      self.array = map(chr, range(1,256))
-    elif isinstance(input, Input.File):
-      self.array = map(chr, range(0,256))
+    self.input_len = len(input)
 
-    self.size = len(self.array)
+    if   isinstance(input, Input.Arg):
+      self.array = map(chr, range(1, 256))
+    elif isinstance(input, Input.File):
+      self.array = map(chr, range(0, 256))
+
+    self.array_len = len(self.array)
+
+  #def GetDelta(self):
 
   def Mutate(self):
     pass
   def GetData(self):
-    return
+    return None
+  def GetDelta(self):
+    pass
 
-
+"""
 class RandomMutator(Mutator):
+
 
   def Mutate(self):
     i = self.i
@@ -52,7 +59,6 @@ class CompleteMutator(Mutator):
 
     #self.input = input
 
-
   def Mutate(self):
     i = self.i
     rand = random.randint(0,self.size-1)
@@ -65,26 +71,40 @@ class CompleteMutator(Mutator):
 
   def GetInput(self):
     return self.input.copy()
-
+"""
 
 class BruteForceMutator(Mutator):
-  
-  array_i = 0 
-  def Mutate(self):
+
+  array_i = 0
+
+  def __iter__(self):
+    return self
+
+  def next(self):
+
     i = self.i
     input = self.input.copy()
     #print self.array[rand]
     input.data = input.data[:i] + self.array[self.array_i] + input.data[i+1:]
-    if (self.array_i == len(self.array)-1):
+
+    if self.array_i == self.array_len-1:
       self.array_i = 0
-      self.i = self.i + 1
+
+      if i == self.input_len-1:
+        raise StopIteration
+      else:
+        self.i = self.i + 1
+
     else:
       self.array_i = self.array_i + 1
+
     return input
 
   def GetInput(self):
     return self.input.copy()
 
+  def GetDelta(self):
+    return self.i, ord(self.array[self.array_i-1])
 
 class InputMutator:
   def __init__(self, args, files, mutator):
@@ -98,17 +118,49 @@ class InputMutator:
       self.arg_mutators.append(mutator(input))
     for input in files:
       self.file_mutators.append(mutator(input))
-  #def __mutate__(self, j,  
 
-  def GetMutatedInput(self): 
-    r = ""
-    for j,m in enumerate(self.arg_mutators + self.file_mutators):
-      if self.i == j:
-         r = r + m.Mutate().PrepareData() + " "
+    self.inputs = self.arg_mutators + self.file_mutators
+    self.inputs_len = len(self.inputs)
+  #def __mutate__(self, j,
+
+  def __iter__(self):
+    return self
+
+  def next(self, mutate = True):
+    r = []
+
+    for j, m in enumerate(self.arg_mutators + self.file_mutators):
+      if self.i == j and mutate:
+         try:
+           input = m.next()
+           data = input.PrepareData()
+           i,v = m.GetDelta()
+           delta = input.GetName(), i, v
+
+         except StopIteration:
+           self.i = self.i + 1
+
+           if self.i == self.inputs_len:
+             raise StopIteration
+
+           return self.next()
+
       else:
-         r = r + m.GetInput().PrepareData() + " "
+        input = m.GetInput()
+        data = input.PrepareData()
 
-    return r
+      if data:
+        r.append(data)
+
+    return delta, r
+
+  #def GetDelta(self):
+  #
+  #  mutator = self.inputs[self.i]
+  #  input = mutator.GetInput()
+  #
+  #  offset, val = mutator.GetDelta()
+  #  return [input.GetName(), offset, val]:
 
     #f = lambda m: m.GetInput().PrepareData()
 

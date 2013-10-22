@@ -1,6 +1,13 @@
 class Input:
+
+  data = None
+
   def __init__(self):
     pass
+
+  def __len__(self):
+    return len(self.data)
+
   def copy(self):
     assert(False)
 
@@ -12,7 +19,7 @@ class Arg(Input):
     if ("\0" in data):
       self.data = self.data.split("\0")[0]
 
-    self.size = len(data)
+    self.size = len(self.data)
 
   def GetData(self):
     return str(self.data)
@@ -37,6 +44,9 @@ class Arg(Input):
   def copy(self):
     return Arg(self.i, self.data)
 
+  def GetName(self):
+    return "argv_"+str(self.i)
+
 class File(Input):
   def __init__(self, filename, data):
     self.filename = str(filename)
@@ -59,10 +69,13 @@ class File(Input):
       with open(self.filename, 'w') as f:
         f.write(self.data)
 
-      return ""
+      return None
 
   def IsValid(self):
     return True
 
   def copy(self):
-    return File(self.filename, self.data)    
+    return File(self.filename, self.data)
+
+  def GetName(self):
+    return "file_"+self.filename.replace("/", "__")
