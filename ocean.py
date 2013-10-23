@@ -4,6 +4,7 @@
 import os
 import argparse
 import csv
+import sys
 
 from ptrace import PtraceError
 from ptrace.debugger import (PtraceDebugger, Application,
@@ -38,6 +39,7 @@ from Event import Exit, Signal, StrncmpCall
 
 from ELF import ELF
 from Run import Launch
+from Stats import Stats
 
 class App(Application):
     def __init__(self, program, outdir, no_stdout = False):
@@ -64,8 +66,8 @@ class App(Application):
 
         self.followterms = []
 
-        with open(self.outdir+"/"+self.name+".csv", "w+") as f:
-          f.write("")
+        #with open(self.outdir+"/"+self.name+".csv", "w+") as f:
+        #  f.write("")
 
 
     def createEvent(self, signal):
@@ -197,36 +199,21 @@ class App(Application):
             #    return
 
 
-    def getData(self, delta, inputs):
+    def getData(self, inputs):
         self.events = []
         self.debugger = PtraceDebugger()
 
         #try:
         self.runProcess([self.program]+inputs)
-        with open(self.outdir+"/"+self.name+".csv", "a+") as csvfile:
-          eventwriter = csv.writer(csvfile, delimiter='\t', quotechar='\'')
-          eventwriter.writerow(list(delta)+self.events)
-
-
-        #
-        #for x in delta:
-        #  print repr(x), "\t",
-        #
-        #print  "\t",
-        #
-        #for event in self.events:
-        #  print event,
-        #print ""
-        #  #print event.GetVector()
-        #except KeyboardInterrupt:
-        #    error("Interrupt debugger: quit!")
-        #except PTRACE_ERRORS, err:
-        #    writeError(getLogger(), err, "Debugger error")
+        #with open(self.outdir+"/"+self.name+".csv", "a+") as csvfile:
+        #  eventwriter = csv.writer(csvfile, delimiter='\t', quotechar='\'')
+        #  eventwriter.writerow(list(delta)+self.events)
 
         self.process.terminate()
         self.process.detach()
 
         self.process = None
+        return self.events
         #for desc in self.ofiles:
         #  os.close(desc)
         #self.debugger.quit()
@@ -245,7 +232,7 @@ if __name__ == "__main__":
 
     options = parser.parse_args()
     testcase = options.testcase
-    outdir = options.outdir
+    outfile = options.outdir
     no_stdout = options.no_stdout
 
 
@@ -255,13 +242,26 @@ if __name__ == "__main__":
     inputs = InputMutator(GetArgs(), GetFiles(), BruteForceMutator)
 
 
-    app = App(program, no_stdout=no_stdout, outdir = outdir)
+    app = App(program, no_stdout=no_stdout, outdir = outfile)
+    stats = Stats()
     i = 10
 
     #app.getData(input.GetInput(), inputs.GetDelta())
 
     for delta, mutated in inputs:
-      app.getData(delta, mutated)
+      events = app.getData(mutated)
+      stats.AddData(delta, events)
+
+    xss = stats.Compute()
+
+    if (outfile == "/dev/stdout"):
+      csvfile = sys.stdout
+    else:
+      csvfile = open(outfile, "a+")
+
+    csvwriter = csv.writer(csvfile, delimiter='\t', quotechar='\'')
+    for xs in xss:
+      csvwriter.writerow([testcase]+xs)
 
     #for i in range(100):
       #print inputs.GetInput()
