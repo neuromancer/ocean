@@ -9,6 +9,8 @@ from sys import stdin
 
 def Launch(cmd, no_stdout, env):
 
+  #cmd = ["/usr/bin/timeout", "-k", "1", "3"]+cmd
+  #print cmd
   if cmd[-1][0] == "<":
     filename = cmd[-1].replace("< ", "")
 

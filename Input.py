@@ -47,6 +47,9 @@ class Arg(Input):
   def GetName(self):
     return "argv_"+str(self.i)
 
+  def GetType(self):
+    return "arg"
+
 class File(Input):
   def __init__(self, filename, data):
     self.filename = str(filename)
@@ -79,3 +82,6 @@ class File(Input):
 
   def GetName(self):
     return "file_"+self.filename.replace("/", "__")
+
+  def GetType(self):
+    return "file"

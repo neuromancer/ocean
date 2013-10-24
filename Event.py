@@ -113,6 +113,13 @@ class Exit(Event):
     return str(self.name)
 
 
+class Timeout(Event):
+  def __init__(self, secs):
+    self.code = secs
+    self.name = "Timeout "+str(secs)+" secs"
+
+  def __str__(self):
+    return str(self.name)
 
 class Syscall(Event):
   def __init__(self, name):

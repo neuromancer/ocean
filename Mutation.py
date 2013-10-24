@@ -104,7 +104,8 @@ class BruteForceMutator(Mutator):
     return self.input.copy()
 
   def GetDelta(self):
-    return self.i, ord(self.array[self.array_i-1])
+    rel = (float(self.i) / self.input_len) * 100
+    return rel, ord(self.array[self.array_i-1])
 
 class InputMutator:
   def __init__(self, args, files, mutator):
@@ -135,7 +136,7 @@ class InputMutator:
            input = m.next()
            data = input.PrepareData()
            i,v = m.GetDelta()
-           delta = input.GetName(), i, v
+           delta = input.GetType(), i, v
 
          except StopIteration:
            self.i = self.i + 1

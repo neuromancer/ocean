@@ -23,7 +23,7 @@ from ptrace.process_tools import dumpProcessInfo
 from ptrace.tools import inverseDict
 from ptrace.func_call import FunctionCallOptions
 from ptrace.signames import signalName, SIGNAMES
-from signal import SIGTRAP, SIGSEGV
+from signal import SIGTRAP, SIGALRM, signal, alarm
 from ptrace.terminal import enableEchoMode, terminalWidth
 from errno import ESRCH, EPERM
 from ptrace.cpu_info import CPU_POWERPC
@@ -32,12 +32,13 @@ from ptrace.debugger.memory_mapping import readProcessMappings
 
 
 from Detection import GetArgs, GetFiles, GetCmd, GetDir
-#from Mutation  import RandomMutator, BruteForceMutator, CompleteMutator, InputMutator
 from Mutation  import BruteForceMutator, InputMutator
 
-from Event import Exit, Signal, StrncmpCall
+
+from Event import Exit, Timeout, Signal, StrncmpCall
 
 from ELF import ELF
+from Alarm import Alarm, alarm_handler
 from Run import Launch
 from Stats import Stats
 
@@ -51,8 +52,9 @@ class App(Application):
         self.outdir = str(outdir)
         self.no_stdout = no_stdout
 
-
         self.process = None
+        self.timeouts = 0
+        self.max_timeouts = 10
 
         # Parse ELF
         self.elf = ELF(self.program)
@@ -180,23 +182,37 @@ class App(Application):
         #self.breakpoint(self.elf.FindFuncInPlt("strncmp"))
         #self.breakpoint(self.elf.FindFuncInPlt("strlen"))
 
-        while True:
+        signal(SIGALRM, alarm_handler)
+        timeout = 5
+        alarm(timeout)
+
+        try:
+          while True:
             if not self.debugger or self.crashed:
                 # There is no more process: quit
                 return
 
-            try:
-              self.cont()
-            except ProcessExit, event:
-              self.events.append(Exit(event.exitcode))
+            self.cont()
 
-              pass
               #error(event)
               #self.nextProcess()
 
             #done = True
             #if done:
             #    return
+
+          alarm(0)
+
+        except ProcessExit, event:
+          alarm(0)
+          self.events.append(Exit(event.exitcode))
+          return
+
+        except Alarm:
+          self.events.append(Timeout(timeout))
+          self.timeouts += 1
+          return
+
 
 
     def getData(self, inputs):
@@ -219,6 +235,9 @@ class App(Application):
         #self.debugger.quit()
 
         #error("Quit gdb.")
+
+    def timeouted(self):
+        return self.timeouts >= self.max_timeouts
 
 
 if __name__ == "__main__":
@@ -250,6 +269,10 @@ if __name__ == "__main__":
 
     for delta, mutated in inputs:
       events = app.getData(mutated)
+
+      if app.timeouted():
+        sys.exit(-1)
+
       stats.AddData(delta, events)
 
     xss = stats.Compute()
