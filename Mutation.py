@@ -18,11 +18,11 @@ class Mutator:
   #def GetDelta(self):
 
   def Mutate(self):
-    pass
+    assert(0)
   def GetData(self):
     return None
   def GetDelta(self):
-    pass
+    assert(0)
 
 """
 class RandomMutator(Mutator):
@@ -73,6 +73,24 @@ class CompleteMutator(Mutator):
     return self.input.copy()
 """
 
+
+class NullMutator(Mutator):
+
+  def __iter__(self):
+    return self
+
+  def next(self):
+
+    input = self.input.copy()
+    return input
+
+  def GetInput(self):
+    return self.input.copy()
+
+  def GetDelta(self):
+    return None
+
+
 class BruteForceMutator(Mutator):
 
   array_i = 0
@@ -104,8 +122,18 @@ class BruteForceMutator(Mutator):
     return self.input.copy()
 
   def GetDelta(self):
-    rel = (float(self.i) / self.input_len) * 100
-    return rel, ord(self.array[self.array_i-1])
+
+    delta = dict()
+
+    delta["aoffset"] = self.i
+    delta["roffset"] = (float(self.i) / self.input_len) * 100
+
+    delta["byte"] = ord(self.array[self.array_i-1])
+
+    delta["iname"] = self.input.GetName()
+    delta["itype"] = self.input.GetType()
+
+    return delta
 
 class InputMutator:
   def __init__(self, args, files, mutator):
@@ -129,14 +157,15 @@ class InputMutator:
 
   def next(self, mutate = True):
     r = []
+    delta = None
 
     for j, m in enumerate(self.arg_mutators + self.file_mutators):
       if self.i == j and mutate:
          try:
            input = m.next()
            data = input.PrepareData()
-           i,v = m.GetDelta()
-           delta = input.GetType(), i, v
+           delta = m.GetDelta()
+           #delta = input.GetType(), i, v
 
          except StopIteration:
            self.i = self.i + 1

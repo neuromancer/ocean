@@ -6,25 +6,28 @@ class Stats:
   def __init__(self):
     self.count = dict()
     self.keys = set()
+    self.fields = []
 
-  def __IncCount(self, input, offset, byte):
+  def __IncCount(self, input, offset, byte, data):
 
     self.keys.add((input, offset))
-
-    try:
-      self.count[(input, offset, byte)]+=1
-    except KeyError:
-      self.count[(input, offset, byte)]=1
+    self.count[(input, offset, byte)] = data
 
   def AddData(self, delta, events):
 
-    if "Signal SIGSEGV" in map(str, events):
-      self.__IncCount(delta[0], delta[1], delta[2])
+    if self.fields == []:
+      self.fields = list(delta.keys())
+
+    #print str(events[0])
+    events = map(str, events)
+    #status = events[-1]
+    if "Crash@" in events[-1]:
+      self.__IncCount(delta["iname"], delta["aoffset"], delta["byte"], (delta, list(events)))
 
 
   def Compute(self):
 
-    r = []
+    r = []#[list(self.fields)+["status"]]
 
     for (input, offset) in self.keys:
       i = 0
@@ -41,7 +44,8 @@ class Stats:
 
         for byte in range(256):
           if (input, offset, byte) in self.count:
-            r.append([input, offset, byte]) #print (input, offset, byte), "is relevant with prob", str(prob), "!"
+            delta, events = self.count[(input, offset, byte)]
+            r.append(delta.values()+[' '.join(events)]) #print (input, offset, byte), "is relevant with prob", str(prob), "!"
 
     return r
     #print self.keys

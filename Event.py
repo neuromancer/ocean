@@ -51,7 +51,8 @@ class Call(Event):
 
   def __str__(self):
     if self.param_values == []:
-      return str(self.ret + " " + self.name + "(" + ",".join(self.param_types) + ")")
+      #return str(self.ret + " " + self.name + "(" + ",".join(self.param_types) + ")")
+      return str(self.name)
     else:
       return str([self.ret, self.name] +self.param_values)
 
@@ -104,23 +105,6 @@ class Signal(Event):
   def __str__(self):
     return str(self.name)
 
-class Exit(Event):
-  def __init__(self, code):
-    self.code = code
-    self.name = "Exit with "+str(code)
-
-  def __str__(self):
-    return str(self.name)
-
-
-class Timeout(Event):
-  def __init__(self, secs):
-    self.code = secs
-    self.name = "Timeout "+str(secs)+" secs"
-
-  def __str__(self):
-    return str(self.name)
-
 class Syscall(Event):
   def __init__(self, name):
     self.name = name
@@ -152,7 +136,33 @@ class StrncmpCall(Call):
 #
 #  return None
 
+# End event
 
+class Exit(Event):
+  def __init__(self, code):
+    self.code = code
+    self.name = "Exit with "+str(code)
 
+  def __str__(self):
+    return str(self.name)
+
+class Timeout(Event):
+  def __init__(self, secs):
+    self.code = secs
+    self.name = "Timeout "+str(secs)+" secs"
+
+  def __str__(self):
+    return str(self.name)
+
+class Crash(Event):
+  def __init__(self, process):
+    self.regs = process.getregs()
+    #for name, type in regs._fields_:
+    #  value = getattr(regs, name)
+    #  print name, "->", hex(value),
+    self.eip = process.getInstrPointer()
+
+  def __str__(self):
+    return "Crash@"+hex(self.eip)
 
 

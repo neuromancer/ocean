@@ -19,26 +19,21 @@ from ptrace.binding import HAS_PTRACE_SINGLESTEP
 from ptrace.disasm import HAS_DISASSEMBLER
 from ptrace.ctypes_tools import (truncateWord,
     formatWordHex, formatAddress, formatAddressRange, word2bytes)
-from ptrace.process_tools import dumpProcessInfo
-from ptrace.tools import inverseDict
-from ptrace.func_call import FunctionCallOptions
+
 from ptrace.signames import signalName, SIGNAMES
 from signal import SIGTRAP, SIGALRM, signal, alarm
 from ptrace.terminal import enableEchoMode, terminalWidth
 from errno import ESRCH, EPERM
 from ptrace.cpu_info import CPU_POWERPC
 from ptrace.debugger import ChildError
-from ptrace.debugger.memory_mapping import readProcessMappings
-
 
 from Detection import GetArgs, GetFiles, GetCmd, GetDir
 from Mutation  import BruteForceMutator, InputMutator
 
-
-from Event import Exit, Timeout, Signal, StrncmpCall
+from Event import Exit, Timeout, Crash, Signal, Call, specs
 
 from ELF import ELF
-from Alarm import Alarm, alarm_handler
+from Status import TimeoutEx, alarm_handler
 from Run import Launch
 from Stats import Stats
 
@@ -83,14 +78,22 @@ class App(Application):
             breakpoint = self.process.findBreakpoint(ip)
             if breakpoint:
                 name = self.elf.FindAddrInPlt(breakpoint.address)
-                call =  StrncmpCall(name)
-                call.DetectParams(self.process)
+                call =  Call(name)
+                #call.DetectParams(self.process)
                 return call
                 #error("Stopped at %s" %
                 #breakpoint.desinstall(set_ip=True)
         else:
           self.crashed = True
-          return Signal(signal)
+          #regs = self.process.getregs()
+          #for name, type in regs._fields_:
+          #  value = getattr(regs, name)
+          #  print name, "->", hex(value),
+
+          #p = self.process.getInstrPointer()
+          #print "eip ->", hex(p)
+          return Crash(self.process)
+          #return Signal(signal)
           #self.processSignal(signal)
         return None
 
@@ -179,6 +182,12 @@ class App(Application):
 
 
         # Set the breakpoints
+
+        for func_name in self.elf.GetFunctions():
+          if func_name in specs:
+            self.breakpoint(self.elf.FindFuncInPlt(func_name))
+        #assert(0)
+
         #self.breakpoint(self.elf.FindFuncInPlt("strncmp"))
         #self.breakpoint(self.elf.FindFuncInPlt("strlen"))
 
@@ -194,13 +203,6 @@ class App(Application):
 
             self.cont()
 
-              #error(event)
-              #self.nextProcess()
-
-            #done = True
-            #if done:
-            #    return
-
           alarm(0)
 
         except ProcessExit, event:
@@ -208,7 +210,7 @@ class App(Application):
           self.events.append(Exit(event.exitcode))
           return
 
-        except Alarm:
+        except TimeoutEx:
           self.events.append(Timeout(timeout))
           self.timeouts += 1
           return
@@ -219,22 +221,14 @@ class App(Application):
         self.events = []
         self.debugger = PtraceDebugger()
 
-        #try:
         self.runProcess([self.program]+inputs)
-        #with open(self.outdir+"/"+self.name+".csv", "a+") as csvfile:
-        #  eventwriter = csv.writer(csvfile, delimiter='\t', quotechar='\'')
-        #  eventwriter.writerow(list(delta)+self.events)
 
         self.process.terminate()
         self.process.detach()
 
         self.process = None
         return self.events
-        #for desc in self.ofiles:
-        #  os.close(desc)
-        #self.debugger.quit()
 
-        #error("Quit gdb.")
 
     def timeouted(self):
         return self.timeouts >= self.max_timeouts
@@ -261,8 +255,10 @@ if __name__ == "__main__":
     inputs = InputMutator(GetArgs(), GetFiles(), BruteForceMutator)
 
 
+    fields = []
     app = App(program, no_stdout=no_stdout, outdir = outfile)
     stats = Stats()
+
     i = 10
 
     #app.getData(input.GetInput(), inputs.GetDelta())

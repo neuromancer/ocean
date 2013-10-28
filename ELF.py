@@ -71,6 +71,9 @@ class ELF:
     for (name, addr) in self.name2func.items():
       self.func2name[addr] = name
 
+  def GetFunctions(self):
+    return self.name2func.keys()
+
   def FindFuncInPlt(self, name):
 
     if name in self.name2addr:
