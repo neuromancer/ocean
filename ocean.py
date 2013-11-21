@@ -28,7 +28,7 @@ from ptrace.cpu_info import CPU_POWERPC
 from ptrace.debugger import ChildError
 
 from Detection import GetArgs, GetFiles, GetCmd, GetDir
-from Mutation  import BruteForceMutator, InputMutator
+from Mutation  import BruteForceMutator, NullMutator, BruteForceExpander, InputMutator
 
 from Event import Exit, Timeout, Crash, Signal, Call, specs
 
@@ -57,6 +57,7 @@ class App(Application):
         self.last_signal = {}
         self.crashed = False
         self.events = []
+        #self.callstack = []
 
         # FIXME: Remove self.breaks!
         self.breaks = dict()
@@ -78,11 +79,25 @@ class App(Application):
             breakpoint = self.process.findBreakpoint(ip)
             if breakpoint:
                 name = self.elf.FindAddrInPlt(breakpoint.address)
-                call =  Call(name)
-                #call.DetectParams(self.process)
-                return call
-                #error("Stopped at %s" %
-                #breakpoint.desinstall(set_ip=True)
+
+                if name is None:
+                  last_call = self.events[-1]
+                  assert(breakpoint.address == last_call.GetReturnAddr())
+
+                  breakpoint.desinstall(set_ip=True)
+                  last_call.DetectReturnValue(self.process)
+                  return None
+
+                else:
+
+                  call = Call(name)
+                  call.DetectParams(self.process)
+                  self.breakpoint(call.GetReturnAddr())
+
+                  #call.DetectParams(self.process)
+                  return call
+                  #error("Stopped at %s" %
+                  #breakpoint.desinstall(set_ip=True)
         else:
           self.crashed = True
           #regs = self.process.getregs()
@@ -140,8 +155,10 @@ class App(Application):
         # Wait for a process signal
         signal = self.debugger.waitSignals()
         process = signal.process
+        event = self.createEvent(signal)
 
-        self.events.append(self.createEvent(signal))
+        if event is not None:
+          self.events.append(event)
 
 
     def readInstrSize(self, address, default_size=None):
@@ -186,6 +203,8 @@ class App(Application):
         for func_name in self.elf.GetFunctions():
           if func_name in specs:
             self.breakpoint(self.elf.FindFuncInPlt(func_name))
+          #elif func_name.lstrip("_") in specs:
+          #  self.breakpoint(self.elf.FindFuncInPlt(func_name.lstrip("_")))
         #assert(0)
 
         #self.breakpoint(self.elf.FindFuncInPlt("strncmp"))
@@ -252,35 +271,59 @@ if __name__ == "__main__":
     os.chdir(GetDir(testcase))
     program = GetCmd(None)
     os.chdir("crash")
-    inputs = InputMutator(GetArgs(), GetFiles(), BruteForceMutator)
 
+    args = GetArgs()
+    files = GetFiles()
+
+    original_inputs = InputMutator(args, files, NullMutator)
+    mutated_inputs  = InputMutator(args, files, BruteForceMutator)
+    expanded_inputs = InputMutator(args, files, BruteForceExpander)
 
     fields = []
     app = App(program, no_stdout=no_stdout, outdir = outfile)
-    stats = Stats()
 
-    i = 10
 
     #app.getData(input.GetInput(), inputs.GetDelta())
 
-    for delta, mutated in inputs:
+    # unchanged input
+    delta, original_input = original_inputs.next()
+    original_events = app.getData(original_input)
+
+    #print "Original test case:"
+    #for event in original_events:
+    #  print event,
+    #print ""
+
+
+    stats = Stats(original_events)
+    #assert(0)
+
+    for delta, mutated in expanded_inputs:
       events = app.getData(mutated)
+
+      #print delta,
+      #for e in events:
+      #  print str(e),
+      #print ""
 
       if app.timeouted():
         sys.exit(-1)
-
+      #print map(repr, mutated)
       stats.AddData(delta, events)
+      #assert(0)
 
-    xss = stats.Compute()
+    exit(0)
 
-    if (outfile == "/dev/stdout"):
-      csvfile = sys.stdout
-    else:
-      csvfile = open(outfile, "a+")
+    #xss = stats.Compute()
 
-    csvwriter = csv.writer(csvfile, delimiter='\t', quotechar='\'')
-    for xs in xss:
-      csvwriter.writerow([testcase]+xs)
+    #if (outfile == "/dev/stdout"):
+    #  csvfile = sys.stdout
+    #else:
+    #  csvfile = open(outfile, "a+")
+
+    #csvwriter = csv.writer(csvfile, delimiter='\t', quotechar='\'')
+    #for xs in xss:
+    #  csvwriter.writerow([testcase]+xs)
 
     #for i in range(100):
       #print inputs.GetInput()

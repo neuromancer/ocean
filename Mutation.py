@@ -127,6 +127,53 @@ class BruteForceMutator(Mutator):
 
     delta["aoffset"] = self.i
     delta["roffset"] = (float(self.i) / self.input_len) * 100
+    delta["mtype"] = "."
+
+    delta["byte"] = ord(self.array[self.array_i-1])
+
+    delta["iname"] = self.input.GetName()
+    delta["itype"] = self.input.GetType()
+
+    return delta
+
+class BruteForceExpander(Mutator):
+
+  array_i = 0
+  new_size = 300
+
+  def __iter__(self):
+    return self
+
+  def next(self):
+
+    i = self.i
+    input = self.input.copy()
+    #print self.array[rand]
+    input.data = input.data[:i] + self.array[self.array_i]*self.new_size + input.data[i+1:]
+
+    if self.array_i == self.array_len-1:
+      self.array_i = 0
+
+      if i == self.input_len-1:
+        raise StopIteration
+      else:
+        self.i = self.i + 1
+
+    else:
+      self.array_i = self.array_i + 1
+
+    return input
+
+  def GetInput(self):
+    return self.input.copy()
+
+  def GetDelta(self):
+
+    delta = dict()
+
+    delta["aoffset"] = self.i
+    delta["roffset"] = (float(self.i) / self.input_len) * 100
+    delta["mtype"] = "+"+str(self.new_size)
 
     delta["byte"] = ord(self.array[self.array_i-1])
 
