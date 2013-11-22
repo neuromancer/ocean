@@ -30,12 +30,12 @@ from ptrace.debugger import ChildError
 from Detection import GetArgs, GetFiles, GetCmd, GetDir
 from Mutation  import BruteForceMutator, NullMutator, BruteForceExpander, InputMutator
 
-from Event import Exit, Timeout, Crash, Signal, Call, specs
+from Event import Exit, Timeout, Crash, Signal, Call, specs, hash_events
 
 from ELF import ELF
 from Status import TimeoutEx, alarm_handler
 from Run import Launch
-from Stats import Stats
+from Graph import CallGraph
 
 class App(Application):
     def __init__(self, program, outdir, no_stdout = False):
@@ -211,7 +211,7 @@ class App(Application):
         #self.breakpoint(self.elf.FindFuncInPlt("strlen"))
 
         signal(SIGALRM, alarm_handler)
-        timeout = 5
+        timeout = 100
         alarm(timeout)
 
         try:
@@ -252,7 +252,6 @@ class App(Application):
     def timeouted(self):
         return self.timeouts >= self.max_timeouts
 
-
 if __name__ == "__main__":
     # Arguments
     parser = argparse.ArgumentParser(description='xxx')
@@ -264,7 +263,7 @@ if __name__ == "__main__":
 
     options = parser.parse_args()
     testcase = options.testcase
-    outfile = options.outdir
+    outdir = options.outdir
     no_stdout = options.no_stdout
 
 
@@ -279,40 +278,69 @@ if __name__ == "__main__":
     mutated_inputs  = InputMutator(args, files, BruteForceMutator)
     expanded_inputs = InputMutator(args, files, BruteForceExpander)
 
-    fields = []
-    app = App(program, no_stdout=no_stdout, outdir = outfile)
-
-
-    #app.getData(input.GetInput(), inputs.GetDelta())
+    tests = set()
+    app = App(program, no_stdout=no_stdout, outdir = outdir)
 
     # unchanged input
     delta, original_input = original_inputs.next()
     original_events = app.getData(original_input)
 
-    #print "Original test case:"
-    #for event in original_events:
-    #  print event,
-    #print ""
+    if not os.path.isdir(outdir):
+      os.mkdir(outdir)
 
+    x = hash_events(original_events)
+    tests.add(x)
 
-    stats = Stats(original_events)
-    #assert(0)
+    name = "ori"
+    g = CallGraph(original_events)
+
+    y = hash(str(g.graph.to_string()))
+    tests.add(y)
+
+    g.WriteGraph(outdir+"/"+name+".dot")
+
 
     for delta, mutated in expanded_inputs:
       events = app.getData(mutated)
 
-      #print delta,
-      #for e in events:
-      #  print str(e),
-      #print ""
+      x = hash_events(events)
+
+      if not (x in tests):
+
+        tests.add(x)
+
+        g = CallGraph(events)
+        y = hash(str(g.graph.to_string()))
+        #print y
+
+        if (not (y in tests)):
+          name = "-".join(map(str, [delta["iname"], delta["mtype"],delta["aoffset"], delta["byte"]]))
+          g.WriteGraph(outdir+"/"+name+".dot")
+          tests.add(y)
+
 
       if app.timeouted():
         sys.exit(-1)
-      #print map(repr, mutated)
-      stats.AddData(delta, events)
-      #assert(0)
 
-    exit(0)
+    for delta, mutated in mutated_inputs:
+      events = app.getData(mutated)
+
+      x = hash_events(events)
+
+      if not (x in tests):
+
+        tests.add(x)
+
+        g = CallGraph(events)
+        y = hash(str(g.graph.to_string()))
+
+        if (not y in tests):
+          name = "-".join(map(str, [delta["iname"], delta["mtype"],delta["aoffset"], delta["byte"]]))
+          g.WriteGraph(outdir+"/"+name+".dot")
+          tests.add(y)
+
+      if app.timeouted():
+        sys.exit(-1)
 
     #xss = stats.Compute()
 

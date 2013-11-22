@@ -37,6 +37,9 @@ def isPtr(ptype):
 def isVoid(ptype):
   return ptype == "void"
 
+def isNull(val):
+  return val == "0x0" or val == "0"
+
 def GetPTypeSize(ptype):
   return 4
 
@@ -160,55 +163,6 @@ class Call(Event):
 
 import pydot
 
-class CallGraph:
-  def __init__(self, events):
-    self.graph = pydot.Dot(graph_type='digraph')
-    for event in events:
-      #print repr(str(event))
-      node = pydot.Node(str(event).replace(":", ""))
-      self.graph.add_node(node)
-
-    for (i, call0) in enumerate(events[:-1]):
-      print "call0:", str(call0)
-      found = False
-      for (typ0, par0) in call0.GetReturnValue():
-        #print typ0, par0
-        if isPtr(typ0):
-          for call1 in events[i+1:-1]:
-
-            print "call1:",str(call1)
-            for (typ1, par1) in call1.GetParameters():
-              node0 = str(call0).replace(":", "")
-              node1 = str(call1).replace(":", "")
-              if (par0 == par1 and node0 <> node1):
-                print "Found!"
-                self.graph.add_edge(pydot.Edge(node0, node1, label=par0))
-                found = True
-
-            if found:
-              break
-
-      found = False
-
-      for (typ0, par0) in call0.GetParameters():
-        if isPtr(typ0):
-          for call1 in events[i+1:-1]:
-
-            print "call1:",str(call1)
-            for (typ1, par1) in call1.GetParameters():
-              node0 = str(call0).replace(":", "")
-              node1 = str(call1).replace(":", "")
-              if (par0 == par1 and node0 <> node1):
-                print "Found!"
-                self.graph.add_edge(pydot.Edge(node0, node1, label=par0))
-                found = True
-
-            if found:
-              break
-
-    self.graph.write_dot("/tmp/g.dot")
-
-
 class Signal(Event):
   def __init__(self, name):
     self.name = name
@@ -267,13 +221,17 @@ class Timeout(Event):
 
 class Crash(Event):
   def __init__(self, process):
-    self.regs = process.getregs()
-    #for name, type in regs._fields_:
-    #  value = getattr(regs, name)
-    #  print name, "->", hex(value),
+    self.raw_regs = process.getregs()
+    self.regs = dict()
+    for name, type in self.raw_regs._fields_:
+      value = getattr(self.raw_regs, name)
+      self.regs[name] = hex(value).replace("L","")
+
     self.eip = process.getInstrPointer()
 
   def __str__(self):
-    return "Crash@"+hex(self.eip)
+    return "Crash@"+hex(self.eip)+", ".join(map(str,self.regs.items()))
 
+def hash_events(events):
+  return hash(tuple(map(str, events)))
 
