@@ -13,7 +13,6 @@ from ptrace.debugger import (PtraceDebugger, Application,
 
 from sys import stdout, stderr, exit
 from logging import getLogger, info, warning, error
-from ptrace.version import VERSION, WEBSITE
 from ptrace.error import PTRACE_ERRORS, writeError
 from ptrace.binding import HAS_PTRACE_SINGLESTEP
 from ptrace.disasm import HAS_DISASSEMBLER
@@ -21,8 +20,7 @@ from ptrace.ctypes_tools import (truncateWord,
     formatWordHex, formatAddress, formatAddressRange, word2bytes)
 
 from ptrace.signames import signalName, SIGNAMES
-from signal import SIGTRAP, SIGALRM, signal, alarm
-from ptrace.terminal import enableEchoMode, terminalWidth
+from signal import SIGTRAP, SIGALRM, SIGABRT, SIGSEGV, SIGCHLD, signal, alarm
 from errno import ESRCH, EPERM
 from ptrace.cpu_info import CPU_POWERPC
 from ptrace.debugger import ChildError
@@ -30,7 +28,7 @@ from ptrace.debugger import ChildError
 from Detection import GetArgs, GetFiles, GetCmd, GetDir
 from Mutation  import BruteForceMutator, NullMutator, BruteForceExpander, InputMutator
 
-from Event import Exit, Timeout, Crash, Signal, Call, specs, hash_events
+from Event import Exit, Abort, Timeout, Crash, Signal, Call, specs, hash_events
 
 from ELF import ELF
 from Status import TimeoutEx, alarm_handler
@@ -98,18 +96,22 @@ class App(Application):
                   return call
                   #error("Stopped at %s" %
                   #breakpoint.desinstall(set_ip=True)
-        else:
+        elif signal.signum == SIGABRT:
           self.crashed = True
-          #regs = self.process.getregs()
-          #for name, type in regs._fields_:
-          #  value = getattr(regs, name)
-          #  print name, "->", hex(value),
+          return Abort()
 
-          #p = self.process.getInstrPointer()
-          #print "eip ->", hex(p)
+        elif signal.signum == SIGSEGV:
+          self.crashed = True
+          return Crash(self.process, signal.getSignalInfo()._sifields._sigfault._addr)
+
+        elif signal.signum == SIGCHLD:
+          self.crashed = True
           return Crash(self.process)
-          #return Signal(signal)
-          #self.processSignal(signal)
+
+        else:
+          print "I don't know what to do with this signal:", str(signal)
+          assert(False)
+
         return None
 
 
@@ -211,7 +213,7 @@ class App(Application):
         #self.breakpoint(self.elf.FindFuncInPlt("strlen"))
 
         signal(SIGALRM, alarm_handler)
-        timeout = 100
+        timeout = 3
         alarm(timeout)
 
         try:
@@ -261,10 +263,15 @@ if __name__ == "__main__":
                         help="Use /dev/null as stdout/stderr, or close stdout and stderr if /dev/null doesn't exist",
                         action="store_true", default=False)
 
+    parser.add_argument("--identify",
+                        help="No mutations are performed, only the original input is processed",
+                        action="store_true", default=False)
+
     options = parser.parse_args()
     testcase = options.testcase
     outdir = options.outdir
     no_stdout = options.no_stdout
+    identify_mode = options.identify
 
 
     os.chdir(GetDir(testcase))
@@ -297,7 +304,16 @@ if __name__ == "__main__":
     y = hash(str(g.graph.to_string()))
     tests.add(y)
 
+    if identify_mode:
+      print program + "\t" +  str(original_events[-1])
+      g.WriteGraph(outdir+"/"+name+".dot")
+      exit(0)
+
+    print original_events[-1]
     g.WriteGraph(outdir+"/"+name+".dot")
+
+
+
 
 
     for delta, mutated in expanded_inputs:
@@ -315,6 +331,7 @@ if __name__ == "__main__":
 
         if (not (y in tests)):
           name = "-".join(map(str, [delta["iname"], delta["mtype"],delta["aoffset"], delta["byte"]]))
+          print events[-1]
           g.WriteGraph(outdir+"/"+name+".dot")
           tests.add(y)
 
@@ -336,23 +353,10 @@ if __name__ == "__main__":
 
         if (not y in tests):
           name = "-".join(map(str, [delta["iname"], delta["mtype"],delta["aoffset"], delta["byte"]]))
+          print events[-1]
           g.WriteGraph(outdir+"/"+name+".dot")
           tests.add(y)
 
       if app.timeouted():
         sys.exit(-1)
 
-    #xss = stats.Compute()
-
-    #if (outfile == "/dev/stdout"):
-    #  csvfile = sys.stdout
-    #else:
-    #  csvfile = open(outfile, "a+")
-
-    #csvwriter = csv.writer(csvfile, delimiter='\t', quotechar='\'')
-    #for xs in xss:
-    #  csvwriter.writerow([testcase]+xs)
-
-    #for i in range(100):
-      #print inputs.GetInput()
-      #app.getData(inputs.GetMutatedInput())

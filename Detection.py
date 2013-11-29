@@ -64,17 +64,18 @@ def GetFiles():
   r = []
   stdinf = "file___dev__stdin.symb"
 
-  for _,_,files in os.walk('.'):
-    for f in files:
-      if (stdinf == f):
-        r.append(GetFile("/dev/stdin",stdinf))
-      elif ("file_" in f):
-        filename = f.replace(".symb","")
-        filename = filename.replace("file_","")        
-        filename = filename.replace(".__", "")
-        x = GetFile(filename,f) 
-        if x.IsValid():
-          r.append(x)
+  for dir,_,files in os.walk('.'):
+    if dir == '.':
+      for f in files:
+        if (stdinf == f):
+          r.append(GetFile("/dev/stdin",stdinf))
+        elif ("file_" in f):
+          filename = f.replace(".symb","")
+          filename = filename.replace("file_","")
+          filename = filename.replace(".__", "")
+          x = GetFile(filename,f)
+          if x.IsValid():
+            r.append(x)
 
   return r
 

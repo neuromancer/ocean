@@ -7,6 +7,8 @@ from sklearn.preprocessing import normalize
 from scipy.sparse import hstack
 from scipy.linalg import norm
 
+from distorm import Decode, Decode32Bits
+
 realpath = os.path.dirname(os.path.realpath(__file__))
 datadir = "data/"
 f = open(realpath+"/"+datadir+"prototypes.conf")
@@ -27,6 +29,7 @@ for raw_spec in f.readlines():
         specs[name] = [ret] + param_types
 
 #print specs
+
 
 def isNum(ptype):
   return ptype in ["int", "ulong", "long"]
@@ -211,6 +214,13 @@ class Exit(Event):
   def __str__(self):
     return str(self.name)
 
+class Abort(Event):
+  def __init__(self):
+    self.name = "Abort"
+
+  def __str__(self):
+    return str(self.name)
+
 class Timeout(Event):
   def __init__(self, secs):
     self.code = secs
@@ -220,18 +230,37 @@ class Timeout(Event):
     return str(self.name)
 
 class Crash(Event):
-  def __init__(self, process):
+
+  relevant_regs_32 = ["eax","ebx","ecx","edx", "esp", "ebp", "esi", "edi"]
+
+  def __init__(self, process, faulty_addr = None):
     self.raw_regs = process.getregs()
     self.regs = dict()
     for name, type in self.raw_regs._fields_:
-      value = getattr(self.raw_regs, name)
-      self.regs[name] = hex(value).replace("L","")
+
+      if name in self.relevant_regs_32:
+        value = getattr(self.raw_regs, name)
+        self.regs[name] = hex(value).replace("L","")
 
     self.eip = process.getInstrPointer()
+    self.faulty_addr = faulty_addr
+    #ins = Decode(self.eip, process.readBytes(self.eip, 8), Decode32Bits)[0]
+    #self.address, self.size, self.text, self.hexa = ins
+    #print ins.operands
+
+    #print process.disassembleOne()
 
   def __str__(self):
-    return "Crash@"+hex(self.eip)+", ".join(map(str,self.regs.items()))
+
+    if self.faulty_addr is None:
+      return "Crash@"+hex(self.eip)
+    else:
+      return "Crash@"+hex(self.eip)+" -> "+hex(self.faulty_addr).replace("L", "")
 
 def hash_events(events):
   return hash(tuple(map(str, events)))
+
+
+
+
 

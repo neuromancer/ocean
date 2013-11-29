@@ -27,7 +27,12 @@ def plt_got(path):
 
   for addr, name, _, gotaddr32, gotaddr64 in lines:
      addr = int(addr, 16)
-     gotaddr = int(gotaddr32 or gotaddr64, 16)
+
+     try:
+       gotaddr = int(gotaddr32 or gotaddr64, 16)
+     except ValueError:
+       gotaddr = None
+
      plt[name] = addr
      got[name] = gotaddr
 
