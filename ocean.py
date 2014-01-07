@@ -20,7 +20,7 @@ from ptrace.ctypes_tools import (truncateWord,
     formatWordHex, formatAddress, formatAddressRange, word2bytes)
 
 from ptrace.signames import signalName, SIGNAMES
-from signal import SIGTRAP, SIGALRM, SIGABRT, SIGSEGV, SIGCHLD, signal, alarm
+from signal import SIGTRAP, SIGALRM, SIGABRT, SIGSEGV, SIGCHLD, SIGWINCH, SIGUSR2, signal, alarm
 from errno import ESRCH, EPERM
 from ptrace.cpu_info import CPU_POWERPC
 from ptrace.debugger import ChildError
@@ -108,6 +108,10 @@ class App(Application):
           self.crashed = True
           return Crash(self.process)
 
+        # Harmless signals
+        elif signal.signum == SIGWINCH:
+          return None
+
         else:
           print "I don't know what to do with this signal:", str(signal)
           assert(False)
@@ -131,6 +135,17 @@ class App(Application):
             else:
                 error("ERROR: Process can no be attached! %s" % err)
         return None
+
+    def destroyProcess(self, signum, frame):
+        assert(self.process is not None)
+        print signum
+        print frame
+
+        #self.debugger.deleteProcess(self.process)
+        #self.process.(SIGUSR2)
+        print "end!"
+        #self.process.detach()
+
 
     def _continueProcess(self, process, signum=None):
         if not signum and process in self.last_signal:
@@ -189,6 +204,12 @@ class App(Application):
 
     def runProcess(self, cmd):
 
+        #print ".",
+
+        signal(SIGALRM, lambda s,a: ())
+        timeout = 3
+        alarm(timeout)
+
         # Create new process
         try:
             self.process = self.createProcess(cmd, self.no_stdout)
@@ -196,6 +217,14 @@ class App(Application):
         except ChildError, err:
             writeError(getLogger(), err, "Unable to create child process")
             return
+        except OSError, err:
+            writeError(getLogger(), err, "Unable to create child process")
+            return
+
+        except IOError, err:
+            writeError(getLogger(), err, "Unable to create child process")
+            return
+
         if not self.process:
             return
 
@@ -205,16 +234,6 @@ class App(Application):
         for func_name in self.elf.GetFunctions():
           if func_name in specs:
             self.breakpoint(self.elf.FindFuncInPlt(func_name))
-          #elif func_name.lstrip("_") in specs:
-          #  self.breakpoint(self.elf.FindFuncInPlt(func_name.lstrip("_")))
-        #assert(0)
-
-        #self.breakpoint(self.elf.FindFuncInPlt("strncmp"))
-        #self.breakpoint(self.elf.FindFuncInPlt("strlen"))
-
-        signal(SIGALRM, alarm_handler)
-        timeout = 3
-        alarm(timeout)
 
         try:
           while True:
@@ -231,10 +250,22 @@ class App(Application):
           self.events.append(Exit(event.exitcode))
           return
 
-        except TimeoutEx:
+        except OSError:
+          print "OSError!"
           self.events.append(Timeout(timeout))
           self.timeouts += 1
           return
+
+        except IOError:
+          print "IOError!"
+          self.events.append(Timeout(timeout))
+          self.timeouts += 1
+          return
+
+        #except TimeoutEx:
+        #   self.events.append(Timeout(timeout))
+        #   self.timeouts += 1
+        #   return
 
 
 
@@ -304,59 +335,55 @@ if __name__ == "__main__":
     y = hash(str(g.graph.to_string()))
     tests.add(y)
 
-    if identify_mode:
-      print program + "\t" +  str(original_events[-1])
-      g.WriteGraph(outdir+"/"+name+".dot")
-      exit(0)
+    # if identify_mode:
+    #   print program + "\t" +  str(original_events[-1])
+    #   g.WriteGraph(outdir+"/"+name+".dot")
+    #   exit(0)
 
     print original_events[-1]
-    g.WriteGraph(outdir+"/"+name+".dot")
-
-
-
-
+    #g.WriteGraph(outdir+"/"+name+".dot")
 
     for delta, mutated in expanded_inputs:
       events = app.getData(mutated)
 
-      x = hash_events(events)
+      # x = hash_events(events)
+      #
+      # if not (x in tests):
+      #
+      #   tests.add(x)
+      #
+      #   g = CallGraph(events)
+      #   y = hash(str(g.graph.to_string()))
+      #   #print y
+      #
+      #   if (not (y in tests)):
+      #     name = "-".join(map(str, [delta["iname"], delta["mtype"],delta["aoffset"], delta["byte"]]))
+      #     #print events[-1]
+      #     g.WriteGraph(outdir+"/"+name+".dot")
+      #     tests.add(y)
 
-      if not (x in tests):
 
-        tests.add(x)
-
-        g = CallGraph(events)
-        y = hash(str(g.graph.to_string()))
-        #print y
-
-        if (not (y in tests)):
-          name = "-".join(map(str, [delta["iname"], delta["mtype"],delta["aoffset"], delta["byte"]]))
-          print events[-1]
-          g.WriteGraph(outdir+"/"+name+".dot")
-          tests.add(y)
-
-
-      if app.timeouted():
-        sys.exit(-1)
+      #if app.timeouted():
+      #  sys.exit(-1)
 
     for delta, mutated in mutated_inputs:
       events = app.getData(mutated)
 
-      x = hash_events(events)
+      # x = hash_events(events)
+      #
+      # if not (x in tests):
+      #
+      #   tests.add(x)
+      #
+      #   g = CallGraph(events)
+      #   y = hash(str(g.graph.to_string()))
+      #
+      #   if (not y in tests):
+      #     name = "-".join(map(str, [delta["iname"], delta["mtype"],delta["aoffset"], delta["byte"]]))
+      #     print events[-1]
+      #     g.WriteGraph(outdir+"/"+name+".dot")
+      #     tests.add(y)
 
-      if not (x in tests):
-
-        tests.add(x)
-
-        g = CallGraph(events)
-        y = hash(str(g.graph.to_string()))
-
-        if (not y in tests):
-          name = "-".join(map(str, [delta["iname"], delta["mtype"],delta["aoffset"], delta["byte"]]))
-          print events[-1]
-          g.WriteGraph(outdir+"/"+name+".dot")
-          tests.add(y)
-
-      if app.timeouted():
-        sys.exit(-1)
+      #if app.timeouted():
+      #  sys.exit(-1)
 

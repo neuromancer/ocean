@@ -1,13 +1,13 @@
 import os
 
 from ptrace.ctypes_tools import bytes2word
-from sklearn.feature_extraction.text import HashingVectorizer
-from sklearn.preprocessing import normalize
+#from sklearn.feature_extraction.text import HashingVectorizer
+#from sklearn.preprocessing import normalize
 
-from scipy.sparse import hstack
-from scipy.linalg import norm
+#from scipy.sparse import hstack
+#from scipy.linalg import norm
 
-from distorm import Decode, Decode32Bits
+#from distorm import Decode, Decode32Bits
 
 realpath = os.path.dirname(os.path.realpath(__file__))
 datadir = "data/"
@@ -90,9 +90,9 @@ class Call(Event):
     self.dim = 256
     self.v = None
 
-    self.hasher = HashingVectorizer(encoding='iso-8859-15', n_features=self.dim / 2,
-                                    analyzer='char', tokenizer=lambda x: [x],
-                                    ngram_range=(1, 3), lowercase=False)
+    #self.hasher = HashingVectorizer(encoding='iso-8859-15', n_features=self.dim / 2,
+    #                                analyzer='char', tokenizer=lambda x: [x],
+    #                                ngram_range=(1, 3), lowercase=False)
 
   def __str__(self):
     if self.param_values == []:

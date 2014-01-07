@@ -2,31 +2,108 @@
 
 import os
 
-from ptrace.debugger.child import createChild
+#from ptrace.debugger.child import createChild
 from os import dup2, close, open as fopen, O_RDONLY
 from sys import stdin
+from os import (
+    fork, execv, execve, waitpid,
+    close, dup2, pipe,
+    read, write, devnull)
+
+from ptrace.binding import ptrace_traceme
+from ptrace import PtraceError
+
+fds = []
+c = 0
+
+
+class ChildError(RuntimeError):
+    pass
+
+def _execChild(arguments, no_stdout, env):
+    if no_stdout:
+        try:
+            null = open(devnull, 'wb')
+            dup2(null.fileno(), 1)
+            dup2(1, 2)
+            null.close()
+        except IOError, err:
+            close(2)
+            close(1)
+    try:
+        if env is not None:
+            execve(arguments[0], arguments, env)
+        else:
+            execv(arguments[0], arguments)
+    except Exception, err:
+        raise ChildError(str(err))
+
+def createChild(arguments, no_stdout, env=None):
+    """
+    Create a child process:
+     - arguments: list of string where (eg. ['ls', '-la'])
+     - no_stdout: if True, use null device for stdout/stderr
+     - env: environment variables dictionary
+
+    Use:
+     - env={} to start with an empty environment
+     - env=None (default) to copy the environment
+    """
+
+    # Fork process
+    pid = fork()
+    if pid:
+        return pid
+    else:
+
+        try:
+          ptrace_traceme()
+        except PtraceError, err:
+          raise ChildError(str(err))
+
+        _execChild(arguments, no_stdout, env)
+        exit(255)
 
 
 def Launch(cmd, no_stdout, env):
-
+  global fds
+  global c
+  c = c + 1
   #cmd = ["/usr/bin/timeout", "-k", "1", "3"]+cmd
   #print cmd
-  if cmd[-1][0] == "< ":
+  if cmd[-1][0:2] == "< ":
     filename = cmd[-1].replace("< ", "")
 
-    try:
-      close(3)
-    except OSError:
-      pass
+    #try:
+    #  close(3)
+    #except OSError:
+    #  print "OsError!"
+    #  pass
 
-      desc = fopen(filename,O_RDONLY)
-      dup2(desc, stdin.fileno())
-      #close(desc)
+    for fd in fds:
+      #print fd,
+      try:
+        close(fd)
+        #print "closed!"
+      except OSError:
+        #print "failed close!"
+        pass
+
+    fds = []
+
+    desc = fopen(filename,O_RDONLY)
+    fds.append(desc)
+    dup2(desc, stdin.fileno())
+    fds.append(desc)
+    #close(desc)
 
     cmd = cmd[:-1]
 
-  #print "cmd:", cmd
-  return createChild(cmd, no_stdout, env)
+  print "c:", c
+  r = createChild(cmd, no_stdout, env)
+  print "Done!"
+
+  return r
 
 
 #class Runner:
