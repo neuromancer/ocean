@@ -29,6 +29,8 @@ if __name__ == "__main__":
     no_stdout = options.no_stdout
     identify_mode = options.identify
 
+    csvfile = sys.stdout
+    writer = csv.writer(csvfile, delimiter='\t')
 
     os.chdir(GetDir(testcase))
     program = GetCmd(None)
@@ -51,43 +53,24 @@ if __name__ == "__main__":
     #if not os.path.isdir(outdir):
     #  os.mkdir(outdir)
 
-    #x = hash_events(original_events)
-    #tests.add(x)
+    #writer.writerow([program]+map(lambda (x,y): x+"="+y, original_events.items()))
+    events = vectorizer(original_events)
+    writer.writerow([program]+events)
 
-    #name = "ori"
-    #g = CallGraph(original_events)
-
-    #y = hash(str(g.graph.to_string()))
-    #tests.add(y)
-
-    # if identify_mode:
-    #   print program + "\t" +  str(original_events[-1])
-    #   g.WriteGraph(outdir+"/"+name+".dot")
-    #   exit(0)
-
-    #g.WriteGraph(outdir+"/"+name+".dot")
-    csvfile = sys.stdout
-    writer = csv.writer(csvfile, delimiter='\t')
-    
-    #print map(lambda x: (x,1), specs)
-    #print vec.get_feature_names()
-  
-    #exit(0)
-    #mes = []
+    x = hash(tuple(events))
+    tests.add(x)
 
     for delta, mutated in expanded_inputs:
       if app.timeouted():
         sys.exit(-1)
 
       events = app.getData(mutated)
-      events = dict(map(lambda x: x.GetTypedName(), events))
+      events = vectorizer(events)
 
       x = hash(tuple(events))
       if not (x in tests):
         tests.add(x)
-        writer.writerow([program]+map(lambda (x,y): x+"="+y, events.items()))
-        
-        writer.writerow([program]+list(vectorizer(events)))
+        writer.writerow([program]+events)
 
       # x = hash_events(events)
       #
@@ -114,28 +97,10 @@ if __name__ == "__main__":
         sys.exit(-1)
 
       events = app.getData(mutated)
-      events = dict(map(lambda x: x.GetTypedName(), events))
+      events = vectorizer(events)
 
       x = hash(tuple(events))
       if not (x in tests):
         tests.add(x)
-        writer.writerow([program]+map(lambda (x,y): x+"="+y, events.items()))
-
-      # x = hash_events(events)
-      #
-      # if not (x in tests):
-      #
-      #   tests.add(x)
-      #
-      #   g = CallGraph(events)
-      #   y = hash(str(g.graph.to_string()))
-      #
-      #   if (not y in tests):
-      #     name = "-".join(map(str, [delta["iname"], delta["mtype"],delta["aoffset"], delta["byte"]]))
-      #     print events[-1]
-      #     g.WriteGraph(outdir+"/"+name+".dot")
-      #     tests.add(y)
-
-      #if app.timeouted():
-      #  sys.exit(-1)
-
+        #print events
+        writer.writerow([program]+events)

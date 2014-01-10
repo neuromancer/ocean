@@ -10,7 +10,7 @@ from ptrace.ctypes_tools import (truncateWord,
     formatWordHex, formatAddress, formatAddressRange, word2bytes)
 
 from ptrace.signames import signalName, SIGNAMES
-from signal import SIGTRAP, SIGALRM, SIGABRT, SIGSEGV, SIGCHLD, SIGWINCH, SIGUSR2, signal, alarm
+from signal import SIGTRAP, SIGALRM, SIGABRT, SIGSEGV, SIGCHLD, SIGWINCH, SIGFPE, signal, alarm
 from errno import ESRCH, EPERM
 from ptrace.cpu_info import CPU_POWERPC
 from ptrace.debugger import ChildError
@@ -67,10 +67,14 @@ class Process(Application):
                 if name is None:
                   #last_call = self.events[-1]
                   assert(self.last_call <> None)
-                  assert(breakpoint.address == self.last_call.GetReturnAddr())
+                  #print breakpoint.address, self.last_call.GetReturnAddr()
 
                   breakpoint.desinstall(set_ip=True)
-                  self.last_call.DetectReturnValue(self.process)
+                  if (breakpoint.address == self.last_call.GetReturnAddr()):
+                    self.last_call.DetectReturnValue(self.process)
+                  else:
+                    pass # FIXME: Why this could happen?
+
                   return []
 
                 else:
@@ -89,13 +93,17 @@ class Process(Application):
           self.crashed = True
           return [Signal("SIGSEGV"), Crash(self.process, signal.getSignalInfo()._sifields._sigfault._addr)]
 
+        elif signal.signum == SIGFPE:
+          self.crashed = True
+          return [Signal("SIGFPE"), Crash(self.process)]
+
         elif signal.signum == SIGCHLD:
           self.crashed = True
           return [Signal("SIGCHLD"), Crash(self.process)]
 
         # Harmless signals
         elif signal.signum == SIGWINCH:
-          return [Signal("SIGWINCH")]
+          return [] # User generated, ignore.
 
         else:
           print "I don't know what to do with this signal:", str(signal)

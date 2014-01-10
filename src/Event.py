@@ -282,8 +282,8 @@ def hash_events(events):
 all_events = dict(map(lambda x: (x,'unit'), specs))
 
 # termination
-all_events = dict[str(Crash())] = 'unit'
-all_events = dict[str(Abort())] = 'unit'
+#all_events[str(Crash())] = 'unit'
+#all_events[str(Abort())] = 'unit'
 
 
 
