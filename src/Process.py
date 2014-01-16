@@ -19,6 +19,7 @@ from Event import Exit, Abort, Timeout, Crash, Signal, Call, specs, hash_events
 
 from ELF import ELF
 from Run import Launch
+from MemoryMap import MemoryMaps
 
 class Process(Application):
     def __init__(self, program, outdir, no_stdout = False):
@@ -31,6 +32,7 @@ class Process(Application):
         self.no_stdout = no_stdout
 
         self.process = None
+        self.pid = None
         self.timeouts = 0
         self.max_timeouts = 10
 
@@ -41,15 +43,11 @@ class Process(Application):
         self.last_call = None
         self.crashed = False
         self.events = []
-        #self.callstack = []
 
         # FIXME: Remove self.breaks!
-        self.breaks = dict()
+        #self.breaks = dict()
 
-        self.followterms = []
-
-        #with open(self.outdir+"/"+self.name+".csv", "w+") as f:
-        #  f.write("")
+        #self.followterms = []
 
 
     def createEvents(self, signal):
@@ -78,9 +76,10 @@ class Process(Application):
                   return []
 
                 else:
-
                   call = Call(name)
-                  call.DetectParams(self.process)
+                  self.mm  = MemoryMaps(self.program, self.pid)
+
+                  call.DetectParams(self.process, self.mm)
                   self.last_call = call
                   self.breakpoint(call.GetReturnAddr())
                   return [call]
@@ -112,15 +111,14 @@ class Process(Application):
         return []
 
 
-
     def createProcess(self, cmd, no_stdout):
 
-        pid = Launch(cmd, no_stdout, dict())
+        self.pid = Launch(cmd, no_stdout, dict())
         #self.ofiles = list(files)
         is_attached = True
 
         try:
-            return self.debugger.addProcess(pid, is_attached=is_attached)
+            return self.debugger.addProcess(self.pid, is_attached=is_attached)
         except (ProcessExit, PtraceError), err:
             if isinstance(err, PtraceError) \
             and err.errno == EPERM:
@@ -205,6 +203,8 @@ class Process(Application):
         # Create new process
         try:
             self.process = self.createProcess(cmd, self.no_stdout)
+            #self.mm  = MemoryMaps(self.program, self.pid)
+            #print self.mm
             self.crashed = False
         except ChildError, err:
             writeError(getLogger(), err, "Unable to create child process")

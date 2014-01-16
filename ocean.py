@@ -8,7 +8,7 @@ import sys
 from src.Process    import Process
 from src.Detection  import GetArgs, GetFiles, GetCmd, GetDir
 from src.Mutation   import BruteForceMutator, NullMutator, BruteForceExpander, InputMutator
-from src.Vectorizer import vectorizer
+from src.Vectorizer import Vectorizer
 
 if __name__ == "__main__":
     # Arguments
@@ -30,7 +30,6 @@ if __name__ == "__main__":
     identify_mode = options.identify
 
     csvfile = sys.stdout
-    writer = csv.writer(csvfile, delimiter='\t')
 
     os.chdir(GetDir(testcase))
     program = GetCmd(None)
@@ -43,22 +42,22 @@ if __name__ == "__main__":
     mutated_inputs  = InputMutator(args, files, BruteForceMutator)
     expanded_inputs = InputMutator(args, files, BruteForceExpander)
 
-    tests = set()
     app = Process(program, no_stdout=no_stdout, outdir = None)
+    vec = Vectorizer("test.csv")
 
     # unchanged input
     delta, original_input = original_inputs.next()
     original_events = app.getData(original_input)
+    #exit(0)
 
     #if not os.path.isdir(outdir):
     #  os.mkdir(outdir)
 
     #writer.writerow([program]+map(lambda (x,y): x+"="+y, original_events.items()))
-    events = vectorizer(original_events)
-    writer.writerow([program]+events)
-
-    x = hash(tuple(events))
-    tests.add(x)
+    vec.vectorize(original_events)
+    assert(0)
+    #events = vectorizer(original_events)
+    #writer.writerow([program]+events)
 
     for delta, mutated in expanded_inputs:
       if app.timeouted():
@@ -67,10 +66,7 @@ if __name__ == "__main__":
       events = app.getData(mutated)
       events = vectorizer(events)
 
-      x = hash(tuple(events))
-      if not (x in tests):
-        tests.add(x)
-        writer.writerow([program]+events)
+
 
       # x = hash_events(events)
       #
@@ -99,8 +95,6 @@ if __name__ == "__main__":
       events = app.getData(mutated)
       events = vectorizer(events)
 
-      x = hash(tuple(events))
-      if not (x in tests):
-        tests.add(x)
-        #print events
-        writer.writerow([program]+events)
+
+      #print events
+      writer.writerow([program]+events)

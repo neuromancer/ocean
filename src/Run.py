@@ -1,14 +1,11 @@
 # -- coding: utf-8 --
 
-import os
-
 #from ptrace.debugger.child import createChild
 from os import dup2, close, open as fopen, O_RDONLY
 from sys import stdin
 from os import (
-    fork, execv, execve, waitpid,
-    close, dup2, pipe,
-    read, write, devnull)
+    fork, execv, execve, getpid,
+    close, dup2, devnull, O_RDONLY)
 
 from ptrace.binding import ptrace_traceme
 from ptrace import PtraceError
@@ -100,7 +97,12 @@ def Launch(cmd, no_stdout, env):
     cmd = cmd[:-1]
 
   #print "c:", c
+  #print "self pid", getpid()
+
   r = createChild(cmd, no_stdout, env)
+
+  #print "new pid", r
+  #print "self pid", getpid()
   #print "Done!"
 
   return r

@@ -1,5 +1,9 @@
 from ptrace.ctypes_tools import bytes2word
 from Spec                import specs
+from Types import Type, GetPtype
+from ptrace.error import PtraceError
+
+#from MemoryMap import isHeapPtr, isStackPtr
 #from sklearn.feature_extraction.text import HashingVectorizer
 #from sklearn.preprocessing import normalize
 
@@ -7,47 +11,6 @@ from Spec                import specs
 #from scipy.linalg import norm
 
 #from distorm import Decode, Decode32Bits
-
-def isNum(ptype):
-  return ptype in ["int", "ulong", "long"]
-
-def isPtr(ptype):
-  return "addr" in ptype or "*" in ptype or "string" in ptype or "format" in ptype or "file" in ptype
-
-def isVoid(ptype):
-  return ptype == "void"
-
-def isNull(val):
-  return val == "0x0" or val == "0"
-
-def GetPTypeSize(ptype):
-  return 4
-
-  #if   ptype == "int":
-  #  return 4
-  #elif ptype == "ulong":
-  #  return 4
-  #elif ptype == "addr":
-  #  return 4
-  #elif "string" in ptype:
-  #  return 4
-
-  #print ptype
-  #return 4
-
-def GetPtypeStr((ptype, value)):
-
-  if value is None:
-    return "_"
-
-  if isPtr(ptype):
-    return hex(value).replace("L","")
-  elif isNum(ptype):
-    return str(value)
-  elif isVoid(ptype):
-    return ""
-  else:
-    return "_"
 
 class Event:
   def __init__(self):
@@ -63,6 +26,7 @@ class Call(Event):
     self.retvalue = None
     self.name = str(name)
     self.param_types = list(spec[1:])
+    self.param_ptypes = []
     self.param_values = []
     self.dim = 256
     self.v = None
@@ -72,6 +36,8 @@ class Call(Event):
     #                                ngram_range=(1, 3), lowercase=False)
 
   def __str__(self):
+    pass
+    """
     if self.param_values == []:
       #return str(self.ret + " " + self.name + "(" + ",".join(self.param_types) + ")")
       return str(self.name)
@@ -87,6 +53,7 @@ class Call(Event):
 
       return retaddr + ": " + self.name + "(" + ", ".join(params) + ")" + " = " + retvalue
       #return str([self.ret, self.name] +self.param_values)
+    """
 
   def __DetectRetAddr__(self):
     addr = self.process.getreg("esp")
@@ -94,64 +61,107 @@ class Call(Event):
     return bytes2word(bytes)
 
   def __DetectParam__(self, ptype, offset):
+    ptype = GetPtype(ptype)
 
-   if isPtr(ptype):
+    addr = self.process.getreg("esp")+offset
+    bytes = self.process.readBytes(addr, 4)
 
-     addr = self.process.getreg("esp")+offset
-     bytes = self.process.readBytes(addr, 4)
-     return bytes2word(bytes)
+    if str(ptype) == "Ptr32":
 
-   elif isNum(ptype):
-     addr = self.process.getreg("esp")+offset
-     bytes = self.process.readBytes(addr, 4)
-     return bytes2word(bytes)
-   else:
-     return None
+      ptr = bytes2word(bytes)
+      if ptr == 0x0:
+        return (Type("NPtr32",4), ptr)
+      else:
 
-  def GetParameters(self):
-    params = map(GetPtypeStr, zip(self.param_types,self.param_values))
-    return zip(self.param_types, params)
+        try:
+          _ = self.process.readBytes(ptr, 1)
+        except PtraceError:
+          print "Dptr", hex(ptr)
+          return (Type("DPtr32",4), ptr)
 
-  def GetReturnValue(self):
-    #print "ret:",self.ret
-    ret = map(GetPtypeStr, zip([self.ret],[self.retvalue]))
-    return zip([self.ret], ret)
+        self.mm.checkPtr(ptr)
+
+        if   self.mm.isStackPtr(ptr):
+          return (Type("SPtr32",4), ptr)
+        elif self.mm.isHeapPtr(ptr):
+          return (Type("HPtr32",4), ptr)
+        elif self.mm.isLibPtr(ptr):
+          return (Type("LPtr32",4), ptr)
+        elif self.mm.isFilePtr(ptr):
+          return (Type("FPtr32",4), ptr)
+        elif self.mm.isGlobalPtr(ptr):
+          return (Type("GPtr32",4), ptr)
+        else:
+          return (Type("Ptr32",4), ptr)
+
+    elif str(ptype) == "Num32":
+      num = bytes2word(bytes)
+
+      if num == 0x0:
+        return (Type("Num32B0",4), num)
+      else:
+        binlen = len(bin(num))-2
+        return (Type("Num32B"+str(binlen),4), num)
+
+    return (Type("Top32",4), None)
+
+  #def GetParameters(self, mm):
+  #  self.mm = mm
+  #  params = map(GetPtypeStr, zip(self.param_types,self.param_values))
+  #  return zip(self.param_types, params)
+
+  #def GetReturnValue(self):
+  #  #print "ret:",self.ret
+  #  ret = map(GetPtypeStr, zip([self.ret],[self.retvalue]))
+  #  return zip([self.ret], ret)
 
   def GetReturnAddr(self):
     return self.retaddr
 
-  def DetectParams(self, process):
+  def DetectParams(self, process, mm):
     self.process = process
+    self.mm      = mm
     self.retaddr = self.__DetectRetAddr__()
 
     offset = 4
-    for ptype in self.param_types:
+    #print self.mm
+    #print self.name
+    for ctype in self.param_types:
+      #print ctype
 
-      x = self.__DetectParam__(ptype, offset)
-      self.param_values.append(x)
-      offset += GetPTypeSize(ptype)
+      (ptype, value) = self.__DetectParam__(ctype, offset)
+      self.param_values.append(value)
+      self.param_ptypes.append(ptype)
+      offset += ptype.getSize()
+
+    #assert(0)
 
   def DetectReturnValue(self, process):
     self.retvalue = process.getreg("eax")
 
   def GetTypedName(self):
 
+    return (str(self.name), list(self.param_ptypes))
+
+    """
+
     params = self.GetParameters()
-    params_str = ""
+    params_str = []
 
     for i in range(len(params)):
       type, value = params[i]
       if isPtr(type):
         if isNull(value):
-          params_str = params_str + "NULLPTR,"
+          params_str.append("NULLPTR")
         else:
-          params_str = params_str + "PTR,"
+          params_str.append("PTR")
       elif isNum(type):
           value = int(value)
           binlen = len(bin(value))-1
-          params_str = params_str + "BIN_"+ str(binlen) + ","
+          params_str.append("BIN_"+ str(binlen))
 
     return (str(self.name), params_str)
+    """
 
   #def GetVector(self):
   #  if self.v is None:
@@ -170,7 +180,7 @@ class Signal(Event):
     return str(self.name)
 
   def GetTypedName(self):
-    return ("Signal", str(self.name))
+    return ("Signal", [str(self.name)])
 
 
 class Syscall(Event):
@@ -181,7 +191,7 @@ class Syscall(Event):
     return str(self.name)
 
   def GetTypedName(self):
-    return ("Syscall", str(self.name))
+    return ("Syscall", [str(self.name)])
 
 
 
@@ -276,10 +286,8 @@ class Crash(Event):
 def hash_events(events):
   return hash(tuple(map(str, events)))
 
-
-
 # functions
-all_events = dict(map(lambda x: (x,'unit'), specs))
+#all_events = dict(map(lambda x,y: (x,len(y)), specs.items()))
 
 # termination
 #all_events[str(Crash())] = 'unit'
