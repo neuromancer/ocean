@@ -90,15 +90,18 @@ class Process(Application):
 
         elif signal.signum == SIGSEGV:
           self.crashed = True
-          return [Signal("SIGSEGV"), Crash(self.process, signal.getSignalInfo()._sifields._sigfault._addr)]
+          self.mm  = MemoryMaps(self.program, self.pid)
+          return [Signal("SIGSEGV"), Crash(self.process, self.mm, signal.getSignalInfo()._sifields._sigfault._addr)]
 
         elif signal.signum == SIGFPE:
           self.crashed = True
-          return [Signal("SIGFPE"), Crash(self.process)]
+          self.mm  = MemoryMaps(self.program, self.pid)
+          return [Signal("SIGFPE"), Crash(self.process, self.mm)]
 
         elif signal.signum == SIGCHLD:
           self.crashed = True
-          return [Signal("SIGCHLD"), Crash(self.process)]
+          self.mm  = MemoryMaps(self.program, self.pid)
+          return [Signal("SIGCHLD"), Crash(self.process, self.mm)]
 
         # Harmless signals
         elif signal.signum == SIGWINCH:
@@ -122,7 +125,7 @@ class Process(Application):
         except (ProcessExit, PtraceError), err:
             if isinstance(err, PtraceError) \
             and err.errno == EPERM:
-                error("ERROR: You are not allowed to trace process %s (permission denied or process already traced)" % pid)
+                error("ERROR: You are not allowed to trace process %s (permission denied or process already traced)" % self.pid)
             else:
                 error("ERROR: Process can no be attached! %s" % err)
         return None

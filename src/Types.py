@@ -62,6 +62,10 @@ ptypes = [Type("Num32",  4, None) ,
 for i in range(0,34):
     ptypes.append(Type("Num32B"+str(i), 4, None))
 
+num32_ptypes   = filter(lambda t: "Num32" in str(t), ptypes)
+ptr32_ptypes   = filter(lambda t: "Num32" in str(t), ptypes)
+generic_ptypes = [Type("Top32", 4, None)]
+
 def isNum(ptype):
   return ptype in ["int", "ulong", "long"]
 

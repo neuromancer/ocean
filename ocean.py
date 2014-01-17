@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     #writer.writerow([program]+map(lambda (x,y): x+"="+y, original_events.items()))
     vec.vectorize(original_events)
-    assert(0)
+    #assert(0)
     #events = vectorizer(original_events)
     #writer.writerow([program]+events)
 
@@ -64,9 +64,7 @@ if __name__ == "__main__":
         sys.exit(-1)
 
       events = app.getData(mutated)
-      events = vectorizer(events)
-
-
+      vec.vectorize(events)
 
       # x = hash_events(events)
       #
@@ -84,8 +82,6 @@ if __name__ == "__main__":
       #     g.WriteGraph(outdir+"/"+name+".dot")
       #     tests.add(y)
 
-    #vec.fit_transform(mes)
-    #print vec.get_feature_names()
 
     for delta, mutated in mutated_inputs:
 
@@ -93,8 +89,5 @@ if __name__ == "__main__":
         sys.exit(-1)
 
       events = app.getData(mutated)
-      events = vectorizer(events)
+      vec.vectorize(events)
 
-
-      #print events
-      writer.writerow([program]+events)

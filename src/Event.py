@@ -1,14 +1,7 @@
 from ptrace.ctypes_tools import bytes2word
 from Spec                import specs
 from Types import Type, GetPtype
-from ptrace.error import PtraceError
-
-#from MemoryMap import isHeapPtr, isStackPtr
-#from sklearn.feature_extraction.text import HashingVectorizer
-#from sklearn.preprocessing import normalize
-
-#from scipy.sparse import hstack
-#from scipy.linalg import norm
+from Analysis import RefinePType
 
 #from distorm import Decode, Decode32Bits
 
@@ -23,17 +16,14 @@ class Call(Event):
     assert(name in specs)
     spec = specs[name]
     self.ret = str(spec[0])
-    self.retvalue = None
+    #fixme: void functions and non-returned values should be different!
+    self.retvalue = (Type("Top32",4),None)
     self.name = str(name)
     self.param_types = list(spec[1:])
     self.param_ptypes = []
     self.param_values = []
     self.dim = 256
     self.v = None
-
-    #self.hasher = HashingVectorizer(encoding='iso-8859-15', n_features=self.dim / 2,
-    #                                analyzer='char', tokenizer=lambda x: [x],
-    #                                ngram_range=(1, 3), lowercase=False)
 
   def __str__(self):
     pass
@@ -58,65 +48,17 @@ class Call(Event):
   def __DetectRetAddr__(self):
     addr = self.process.getreg("esp")
     bytes = self.process.readBytes(addr, 4)
-    return bytes2word(bytes)
+    return RefinePType(Type("Ptr32",4),bytes2word(bytes), self.process, self.mm)
+    #return bytes2word(bytes)
 
   def __DetectParam__(self, ptype, offset):
-    ptype = GetPtype(ptype)
-
     addr = self.process.getreg("esp")+offset
     bytes = self.process.readBytes(addr, 4)
+    return RefinePType(GetPtype(ptype),bytes2word(bytes), self.process, self.mm)
 
-    if str(ptype) == "Ptr32":
-
-      ptr = bytes2word(bytes)
-      if ptr == 0x0:
-        return (Type("NPtr32",4), ptr)
-      else:
-
-        try:
-          _ = self.process.readBytes(ptr, 1)
-        except PtraceError:
-          print "Dptr", hex(ptr)
-          return (Type("DPtr32",4), ptr)
-
-        self.mm.checkPtr(ptr)
-
-        if   self.mm.isStackPtr(ptr):
-          return (Type("SPtr32",4), ptr)
-        elif self.mm.isHeapPtr(ptr):
-          return (Type("HPtr32",4), ptr)
-        elif self.mm.isLibPtr(ptr):
-          return (Type("LPtr32",4), ptr)
-        elif self.mm.isFilePtr(ptr):
-          return (Type("FPtr32",4), ptr)
-        elif self.mm.isGlobalPtr(ptr):
-          return (Type("GPtr32",4), ptr)
-        else:
-          return (Type("Ptr32",4), ptr)
-
-    elif str(ptype) == "Num32":
-      num = bytes2word(bytes)
-
-      if num == 0x0:
-        return (Type("Num32B0",4), num)
-      else:
-        binlen = len(bin(num))-2
-        return (Type("Num32B"+str(binlen),4), num)
-
-    return (Type("Top32",4), None)
-
-  #def GetParameters(self, mm):
-  #  self.mm = mm
-  #  params = map(GetPtypeStr, zip(self.param_types,self.param_values))
-  #  return zip(self.param_types, params)
-
-  #def GetReturnValue(self):
-  #  #print "ret:",self.ret
-  #  ret = map(GetPtypeStr, zip([self.ret],[self.retvalue]))
-  #  return zip([self.ret], ret)
 
   def GetReturnAddr(self):
-    return self.retaddr
+    return self.retaddr[1]
 
   def DetectParams(self, process, mm):
     self.process = process
@@ -134,43 +76,14 @@ class Call(Event):
       self.param_ptypes.append(ptype)
       offset += ptype.getSize()
 
-    #assert(0)
-
   def DetectReturnValue(self, process):
-    self.retvalue = process.getreg("eax")
+    self.process = process
+    self.retvalue = RefinePType(GetPtype(self.ret),process.getreg("eax"), self.process, self.mm)
+
 
   def GetTypedName(self):
 
-    return (str(self.name), list(self.param_ptypes))
-
-    """
-
-    params = self.GetParameters()
-    params_str = []
-
-    for i in range(len(params)):
-      type, value = params[i]
-      if isPtr(type):
-        if isNull(value):
-          params_str.append("NULLPTR")
-        else:
-          params_str.append("PTR")
-      elif isNum(type):
-          value = int(value)
-          binlen = len(bin(value))-1
-          params_str.append("BIN_"+ str(binlen))
-
-    return (str(self.name), params_str)
-    """
-
-  #def GetVector(self):
-  #  if self.v is None:
-  #    vs = self.hasher.transform(self.param_values[0:2])
-  #    self.v = normalize(hstack(list(vs)), norm='l1', axis=1)
-  #
-  #  return self.v
-
-import pydot
+    return (str(self.name), [self.retaddr[0],self.retvalue[0]]+list(self.param_ptypes))
 
 class Signal(Event):
   def __init__(self, name):
@@ -229,7 +142,7 @@ class Exit(Event):
     return str(self.name)
 
   def GetTypedName(self):
-    return ("Exit", str(self.code))
+    return ("exited", str(self.code))
 
 class Abort(Event):
   def __init__(self):
@@ -256,7 +169,7 @@ class Crash(Event):
 
   relevant_regs_32 = ["eax","ebx","ecx","edx", "esp", "ebp", "esi", "edi"]
 
-  def __init__(self, process, faulty_addr = None):
+  def __init__(self, process, mm, faulty_addr = None):
     self.raw_regs = process.getregs()
     self.regs = dict()
     for name, type in self.raw_regs._fields_:
@@ -265,8 +178,9 @@ class Crash(Event):
         value = getattr(self.raw_regs, name)
         self.regs[name] = hex(value).replace("L","")
 
-    self.eip = process.getInstrPointer()
-    self.faulty_addr = faulty_addr
+    self.eip = RefinePType(Type("Ptr32",4), process.getInstrPointer(), process, mm)
+    self.faulty_addr = RefinePType(Type("Ptr32",4), faulty_addr, process, mm)
+
     #ins = Decode(self.eip, process.readBytes(self.eip, 8), Decode32Bits)[0]
     #self.address, self.size, self.text, self.hexa = ins
     #print ins.operands
@@ -274,14 +188,13 @@ class Crash(Event):
     #print process.disassembleOne()
 
   def __str__(self):
-
     if self.faulty_addr is None:
       return "Crash@"+hex(self.eip)
     else:
       return "Crash@"+hex(self.eip)+" -> "+hex(self.faulty_addr).replace("L", "")
 
   def GetTypedName(self):
-    return ("Crash", hex(self.eip))
+    return ("crashed", [self.eip[0], self.faulty_addr[0]])
 
 def hash_events(events):
   return hash(tuple(map(str, events)))
