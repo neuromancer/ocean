@@ -1,5 +1,5 @@
 from numpy import zeros, savetxt
-from src.Event    import Call, Crash, Abort, specs
+from src.Event    import Call, Crash, Abort, Signal, specs
 from src.Types    import ptypes, isPtr, isNum, ptr32_ptypes, num32_ptypes, generic_ptypes
 
 features = []
@@ -18,7 +18,8 @@ for name,args in specs.items():
     #+ len(generic_ptypes)
 
 features.append("crashed:eip")  # crash eip
-features.append("crashed:addr") # crash addr
+features.append("abort:eip")  # abort eip
+features.append("SIGSEGV:addr") # sigsegv faulty addr
 
 n_features = len(features)
 
@@ -29,13 +30,15 @@ for ptype in ptypes:
 n_categories = len(categories)
 
 class Vectorizer:
-  def __init__(self, filename):
+  def __init__(self, filename, pname):
     self.tests = set()
     self.filename = filename
+    self.pname = pname
     #self.writer = csv.writer(csvfile, delimiter='\t')
 
   def encode(self, xs):
     r = zeros((n_features,n_categories))
+    print self.pname, "\t",
     for x,y in xs:
       #try:
       print x,"=",y,"\t",
@@ -46,7 +49,7 @@ class Vectorizer:
       #  assert(0)
       r[i,j] = 1.0
 
-    print ""
+    print "\n-----"
 
     return r
 
@@ -63,12 +66,21 @@ class Vectorizer:
       for (index, arg) in enumerate(args[2:]):
         r.add((name+"_"+str(index),str(arg)))
         #print r
-    #elif isinstance(event, Abort):
-    #  pass
+    elif isinstance(event, Abort):
+      (name, fields) = event.GetTypedName()
+      r.add((name+":eip",str(fields[0])))
+
     elif isinstance(event, Crash):
       (name, fields) = event.GetTypedName()
       r.add((name+":eip",str(fields[0])))
-      r.add((name+":addr",str(fields[1])))
+
+    elif isinstance(event, Signal):
+      #assert(0)
+      (name, fields) = event.GetTypedName()
+
+      if name == "SIGSEGV":
+        print fields[0]
+        r.add((name+":addr",str(fields[0])))
 
     return r
 
@@ -78,6 +90,7 @@ class Vectorizer:
     r = set()
 
     for event in events:
+      #print event
       r.update(self.preprocess(event))
 
     events = list(r)
@@ -95,7 +108,7 @@ class Vectorizer:
     v = self.encode(events)
     v.shape = (1,n_categories*n_features)
 
-    savetxt(self.filename, v, delimiter="\t", fmt='%.1f')
+    #savetxt(self.filename, v, delimiter="\t", fmt='%.1f')
 
     #v.shape = n_features*n_categories,
 

@@ -7,7 +7,7 @@ import sys
 
 from src.Process    import Process
 from src.Detection  import GetArgs, GetFiles, GetCmd, GetDir
-from src.Mutation   import BruteForceMutator, NullMutator, BruteForceExpander, InputMutator
+from src.Mutation   import BruteForceMutator, NullMutator, BruteForceExpander, SurpriceMutator ,InputMutator, RandomInputMutator
 from src.Vectorizer import Vectorizer
 
 if __name__ == "__main__":
@@ -41,9 +41,10 @@ if __name__ == "__main__":
     original_inputs = InputMutator(args, files, NullMutator)
     mutated_inputs  = InputMutator(args, files, BruteForceMutator)
     expanded_inputs = InputMutator(args, files, BruteForceExpander)
+    crazy_inputs    = RandomInputMutator(args, files, SurpriceMutator)
 
     app = Process(program, no_stdout=no_stdout, outdir = None)
-    vec = Vectorizer("test.csv")
+    vec = Vectorizer("test.csv", program)
 
     # unchanged input
     delta, original_input = original_inputs.next()
@@ -58,13 +59,17 @@ if __name__ == "__main__":
     #assert(0)
     #events = vectorizer(original_events)
     #writer.writerow([program]+events)
+    max_mut = 3000
 
-    for delta, mutated in expanded_inputs:
+    for (i, (_, mutated)) in enumerate(expanded_inputs):
       if app.timeouted():
         sys.exit(-1)
 
       events = app.getData(mutated)
       vec.vectorize(events)
+
+      if i > max_mut:
+        break
 
       # x = hash_events(events)
       #
@@ -83,11 +88,11 @@ if __name__ == "__main__":
       #     tests.add(y)
 
 
-    for delta, mutated in mutated_inputs:
+    #for delta, mutated in mutated_inputs:
 
-      if app.timeouted():
-        sys.exit(-1)
+    #  if app.timeouted():
+    #    sys.exit(-1)
 
-      events = app.getData(mutated)
-      vec.vectorize(events)
+    #  events = app.getData(mutated)
+    #  vec.vectorize(events)
 

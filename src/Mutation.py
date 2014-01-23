@@ -1,6 +1,7 @@
 import random
-
 import Input
+
+random.seed(0)
 
 class Mutator:
   def __init__(self, input):
@@ -23,6 +24,37 @@ class Mutator:
     return None
   def GetDelta(self):
     assert(0)
+
+class SurpriceMutator(Mutator):
+
+  max_expansion = 9000
+
+  def __iter__(self):
+    return self
+
+  def next(self):
+
+    input = self.input.copy()
+
+    # single byte mutation
+    i = random.randrange(self.input_len)
+    m = self.array[random.randrange(self.array_len)]
+    input.data = input.data[:i] + m + input.data[i+1:]
+
+    i = random.randrange(self.input_len)
+    j = random.randrange(self.max_expansion)
+    m = self.array[random.randrange(self.array_len)]
+
+    #print self.array[rand]
+    input.data = input.data[:i] + m*j + input.data[i+1:]
+
+    return input
+
+  def GetInput(self):
+    return self.input.copy()
+
+  def GetDelta(self):
+    return None
 
 """
 class RandomMutator(Mutator):
@@ -252,4 +284,45 @@ class InputMutator:
 
     #return " ".join(map(f,self.arg_mutators)) + " " + "".join(map(f,self.file_mutators))
     #+ " > /dev/null 2> /dev/null\""
+
+
+class RandomInputMutator:
+  def __init__(self, args, files, mutator):
+    assert(args <> [] or files <> [])
+    self.i = 0
+    self.arg_mutators  = []
+    self.file_mutators = []
+    #self.inputs = list(inputs)
+
+    for input in args:
+      self.arg_mutators.append(mutator(input))
+    for input in files:
+      self.file_mutators.append(mutator(input))
+
+    self.inputs = self.arg_mutators + self.file_mutators
+    self.inputs_len = len(self.inputs)
+  #def __mutate__(self, j,
+
+  def __iter__(self):
+    return self
+
+  def next(self, mutate = True):
+    r = []
+    delta = None
+    self.i = random.randrange(self.inputs_len)
+
+    for j, m in enumerate(self.arg_mutators + self.file_mutators):
+      if self.i == j:
+        input = m.next()
+        data = input.PrepareData()
+        delta = m.GetDelta()
+
+      else:
+        input = m.GetInput()
+        data = input.PrepareData()
+
+      if data:
+        r.append(data)
+
+    return delta, r
 

@@ -26,6 +26,7 @@ class Call(Event):
     self.v = None
 
   def __str__(self):
+    return "call"
     pass
     """
     if self.param_values == []:
@@ -86,14 +87,26 @@ class Call(Event):
     return (str(self.name), [self.retaddr[0],self.retvalue[0]]+list(self.param_ptypes))
 
 class Signal(Event):
-  def __init__(self, name):
+  def __init__(self, name, process, mm): #_sifields = None):
+
+    self.fields = dict()
+    _sifields = process.getsiginfo()._sifields
+
+    if hasattr(_sifields, "_sigfault"):
+      self.fields["addr"] = RefinePType(Type("Ptr32",4), _sifields._sigfault._addr, process, mm)
+
     self.name = name
 
   def __str__(self):
     return str(self.name)
 
   def GetTypedName(self):
-    return ("Signal", [str(self.name)])
+
+    if len(self.fields) > 0:
+      ptypes = map(lambda (x,_): x, self.fields.values())
+      return (str(self.name), ptypes)
+    else:
+      return (str(self.name), ["()"])
 
 
 class Syscall(Event):
@@ -105,33 +118,6 @@ class Syscall(Event):
 
   def GetTypedName(self):
     return ("Syscall", [str(self.name)])
-
-
-
-#class StrncmpCall(Call):
-#  def __init__(self, raw):
-#    Call.__init__(self, raw)
-#
-#  def DetectParams(self, process):
-#    Call.DetectParams(self, process)
-#
-#    slen = self.param_values[2]
-#    for i in range(2):
-#      if len(self.param_values[i]) > slen:
-#        self.param_values[i] = self.param_values[i][0:slen]
-
-
-#etable = [("strncmp@plt",StrncmpCall)]
-
-#def GetEvent(raw):
-#  rlist = ast.literal_eval(raw)
-#  for (e, c) in etable:
-#    if e == rlist[1]:
-#      return c(rlist)
-#
-#  return None
-
-# End event
 
 class Exit(Event):
   def __init__(self, code):
@@ -145,14 +131,15 @@ class Exit(Event):
     return ("exited", str(self.code))
 
 class Abort(Event):
-  def __init__(self):
+  def __init__(self, process, mm):
     self.name = "Abort"
+    self.eip = RefinePType(Type("Ptr32",4), process.getInstrPointer(), process, mm)
 
   def __str__(self):
     return str(self.name)
 
   def GetTypedName(self):
-    return ("Abort", "unit")
+    return ("abort", [self.eip[0]])#
 
 class Timeout(Event):
   def __init__(self, secs):
@@ -167,19 +154,18 @@ class Timeout(Event):
 
 class Crash(Event):
 
-  relevant_regs_32 = ["eax","ebx","ecx","edx", "esp", "ebp", "esi", "edi"]
+  #relevant_regs_32 = ["eax","ebx","ecx","edx", "esp", "ebp", "esi", "edi"]
 
-  def __init__(self, process, mm, faulty_addr = None):
-    self.raw_regs = process.getregs()
-    self.regs = dict()
-    for name, type in self.raw_regs._fields_:
+  def __init__(self, process, mm):
+    #self.raw_regs = process.getregs()
+    #self.regs = dict()
+    #for name, type in self.raw_regs._fields_:
 
-      if name in self.relevant_regs_32:
-        value = getattr(self.raw_regs, name)
-        self.regs[name] = hex(value).replace("L","")
+    #  if name in self.relevant_regs_32:
+    #    value = getattr(self.raw_regs, name)
+    #    self.regs[name] = hex(value).replace("L","")
 
     self.eip = RefinePType(Type("Ptr32",4), process.getInstrPointer(), process, mm)
-    self.faulty_addr = RefinePType(Type("Ptr32",4), faulty_addr, process, mm)
 
     #ins = Decode(self.eip, process.readBytes(self.eip, 8), Decode32Bits)[0]
     #self.address, self.size, self.text, self.hexa = ins
@@ -188,13 +174,13 @@ class Crash(Event):
     #print process.disassembleOne()
 
   def __str__(self):
-    if self.faulty_addr is None:
-      return "Crash@"+hex(self.eip)
-    else:
-      return "Crash@"+hex(self.eip)+" -> "+hex(self.faulty_addr).replace("L", "")
+    #if self.faulty_addr is None:
+    return "Crash@"+hex(self.eip)
+    #else:
+    #  return "Crash@"+hex(self.eip)+" -> "+hex(self.faulty_addr).replace("L", "")
 
   def GetTypedName(self):
-    return ("crashed", [self.eip[0], self.faulty_addr[0]])
+    return ("crashed", [self.eip[0]])#, self.faulty_addr[0]])
 
 def hash_events(events):
   return hash(tuple(map(str, events)))

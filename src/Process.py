@@ -86,22 +86,22 @@ class Process(Application):
 
         elif signal.signum == SIGABRT:
           self.crashed = True
-          return [Signal("SIGABRT"),Abort()]
+          return [Signal("SIGABRT",self.process, self.mm), Abort(self.process, self.mm)]
 
         elif signal.signum == SIGSEGV:
           self.crashed = True
           self.mm  = MemoryMaps(self.program, self.pid)
-          return [Signal("SIGSEGV"), Crash(self.process, self.mm, signal.getSignalInfo()._sifields._sigfault._addr)]
+          return [Signal("SIGSEGV", self.process, self.mm), Crash(self.process, self.mm)]
 
         elif signal.signum == SIGFPE:
           self.crashed = True
           self.mm  = MemoryMaps(self.program, self.pid)
-          return [Signal("SIGFPE"), Crash(self.process, self.mm)]
+          return [Signal("SIGFPE", self.process, self.mm), Crash(self.process, self.mm)]
 
         elif signal.signum == SIGCHLD:
           self.crashed = True
           self.mm  = MemoryMaps(self.program, self.pid)
-          return [Signal("SIGCHLD"), Crash(self.process, self.mm)]
+          return [Signal("SIGCHLD", self.process, self.pid), Crash(self.process, self.mm)]
 
         # Harmless signals
         elif signal.signum == SIGWINCH:
