@@ -59,11 +59,11 @@ ptypes = [Type("Num32",  4, None) ,
           Type("Top32", 4, None)
           ]
 
-for i in range(0,34):
+for i in range(0,33,8):
     ptypes.append(Type("Num32B"+str(i), 4, None))
 
 num32_ptypes   = filter(lambda t: "Num32" in str(t), ptypes)
-ptr32_ptypes   = filter(lambda t: "Num32" in str(t), ptypes)
+ptr32_ptypes   = ptypes[1:9]
 generic_ptypes = [Type("Top32", 4, None)]
 
 def isNum(ptype):

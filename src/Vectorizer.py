@@ -1,55 +1,98 @@
+import sys
 from numpy import zeros, savetxt
+
 from src.Event    import Call, Crash, Abort, Signal, specs
 from src.Types    import ptypes, isPtr, isNum, ptr32_ptypes, num32_ptypes, generic_ptypes
 
-features = []
+
+features = dict()
 vec_size = 0
 for name,args in specs.items():
-  features.append(name+":ret_addr") # return address
-  features.append(name+":ret_val") # return value
-  for (index, arg) in enumerate(args):
-    features.append(name+"_"+str(index))
+  features[name+":ret_addr"] = (vec_size, ptr32_ptypes+generic_ptypes) # return address
+  vec_size = vec_size + len(num32_ptypes+generic_ptypes)
+  features[name+":ret_val"] = (vec_size, ptypes)                       # return value
+  vec_size = vec_size + len(ptypes)
 
-    #if isNum(arg):
-    #  vec_size = vec_size + len(num32_ptypes)
-    #elif isPtr(arg):
-    #  vec_size = vec_size + len(ptr32_ptypes)
+  for (index, arg) in enumerate(args[1:]):
+    #features.append(name+"_"+str(index))
+    #print name+"_"+str(index), arg
+
+    if isNum(arg):
+      features[name+"_"+str(index)] = (vec_size, num32_ptypes+generic_ptypes)
+      vec_size = vec_size + len(num32_ptypes+generic_ptypes)
+    elif isPtr(arg):
+      features[name+"_"+str(index)] = (vec_size, ptr32_ptypes+generic_ptypes)
+      vec_size = vec_size + len(ptr32_ptypes+generic_ptypes)
+    else:
+      features[name+"_"+str(index)] = (vec_size, generic_ptypes)
+      vec_size = vec_size + len(generic_ptypes)
 
     #+ len(generic_ptypes)
 
-features.append("crashed:eip")  # crash eip
-features.append("abort:eip")  # abort eip
-features.append("SIGSEGV:addr") # sigsegv faulty addr
+features["crashed:eip"] = (vec_size, ptr32_ptypes+generic_ptypes)  # crash eip
+vec_size = vec_size + len(ptr32_ptypes+generic_ptypes)
 
-n_features = len(features)
+features["abort:eip"] = (vec_size, ptr32_ptypes+generic_ptypes) # abort eip
+vec_size = vec_size + len(ptr32_ptypes+generic_ptypes)
 
-categories = []
-for ptype in ptypes:
-  categories.append(str(ptype))
+features["SIGSEGV:addr"] = (vec_size, ptr32_ptypes+generic_ptypes) # sigsegv faulty addr
+vec_size = vec_size + len(ptr32_ptypes+generic_ptypes)
 
-n_categories = len(categories)
+n_features = vec_size
+#for f,(i,_) in features.items():
+#    print f,i
+
+#print n_features
+#assert(0)
+
+
+# features = []
+# vec_size = 0
+# for name,args in specs.items():
+#   features.append(name+":ret_addr") # return address
+#   features.append(name+":ret_val") # return value
+#   for (index, arg) in enumerate(args):
+#     features.append(name+"_"+str(index))
+#
+#     #if isNum(arg):
+#     #  vec_size = vec_size + len(num32_ptypes)
+#     #elif isPtr(arg):
+#     #  vec_size = vec_size + len(ptr32_ptypes)
+#
+#     #+ len(generic_ptypes)
+#
+# features.append("crashed:eip")  # crash eip
+# features.append("abort:eip")  # abort eip
+# features.append("SIGSEGV:addr") # sigsegv faulty addr
+#
+# n_features = len(features)
+
+# categories = []
+# for ptype in ptypes:
+#   categories.append(str(ptype))
+#
+# n_categories = len(categories)
 
 class Vectorizer:
   def __init__(self, filename, pname):
     self.tests = set()
-    self.filename = filename
+    self.file = open(filename, "a")
     self.pname = pname
     #self.writer = csv.writer(csvfile, delimiter='\t')
 
   def encode(self, xs):
-    r = zeros((n_features,n_categories))
-    print self.pname, "\t",
+    r = zeros(n_features)
+    #print self.pname, "\t",
     for x,y in xs:
       #try:
-      print x,"=",y,"\t",
-      i = features.index(x)
+      #print x,"=",y,"\t",
+      i,categories = features[x]
+      categories = map(str, list(categories))
+      #print categories
       j = categories.index(y)
-      #except ValueError:
-      #  print x,y
-      #  assert(0)
-      r[i,j] = 1.0
+      r[i+j] = 1.0
 
-    print "\n-----"
+    #print "\n-----"
 
     return r
 
@@ -79,7 +122,7 @@ class Vectorizer:
       (name, fields) = event.GetTypedName()
 
       if name == "SIGSEGV":
-        print fields[0]
+        #print fields[0]
         r.add((name+":addr",str(fields[0])))
 
     return r
@@ -106,9 +149,10 @@ class Vectorizer:
     #print n_categories*n_features
 
     v = self.encode(events)
-    v.shape = (1,n_categories*n_features)
+    v.shape = (1,n_features)
 
-    #savetxt(self.filename, v, delimiter="\t", fmt='%.1f')
+    print self.pname+"\t",
+    savetxt(sys.stdout, v, delimiter="\t", fmt='%.1f')
 
     #v.shape = n_features*n_categories,
 

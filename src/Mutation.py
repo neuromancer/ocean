@@ -1,3 +1,22 @@
+"""
+This file is part of ocean.
+
+SEA is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+SEA is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with SEA. If not, see <http://www.gnu.org/licenses/>.
+
+Copyright 2014 by neuromancer
+"""
+
 import random
 import Input
 
@@ -27,7 +46,7 @@ class Mutator:
 
 class SurpriceMutator(Mutator):
 
-  max_expansion = 9000
+  max_expansion = 10000
 
   def __iter__(self):
     return self
@@ -36,17 +55,22 @@ class SurpriceMutator(Mutator):
 
     input = self.input.copy()
 
-    # single byte mutation
-    i = random.randrange(self.input_len)
-    m = self.array[random.randrange(self.array_len)]
-    input.data = input.data[:i] + m + input.data[i+1:]
+    m = random.sample(["s","e","se"],1)[0]
 
-    i = random.randrange(self.input_len)
-    j = random.randrange(self.max_expansion)
-    m = self.array[random.randrange(self.array_len)]
+    if "s" in m:
+      # single byte mutation
+      i = random.randrange(self.input_len)
+      m = self.array[random.randrange(self.array_len)]
+      input.data = input.data[:i] + m + input.data[i+1:]
 
-    #print self.array[rand]
-    input.data = input.data[:i] + m*j + input.data[i+1:]
+    if "e" in m:
+      # expansion mutation
+      i = random.randrange(self.input_len)
+      j = random.randrange(self.max_expansion)
+      m = self.array[random.randrange(self.array_len)]
+
+      #print self.array[rand]
+      input.data = input.data[:i] + m*j + input.data[i+1:]
 
     return input
 
