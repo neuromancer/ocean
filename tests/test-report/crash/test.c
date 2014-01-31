@@ -1,6 +1,6 @@
 int main(int argc, char **argv) {
  
- for (;;) ;
+ //for (;;) ;
 
  int len = 0;
  int i = 0;
