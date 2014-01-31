@@ -42,11 +42,20 @@ if __name__ == "__main__":
                         help="No mutations are performed, only the original input is processed",
                         action="store_true", default=False)
 
+    parser.add_argument("--X-program", dest="envs",
+                        help="",
+                        action="store_const", const=dict(DISPLAY=":0"), default=dict())
+
+    parser.add_argument("--raw-mode", dest="raw",
+                        help="",
+                        action="store_true", default=False)
+
     options = parser.parse_args()
     testcase = options.testcase
     #outdir = options.outdir
     no_stdout = options.no_stdout
     identify_mode = options.identify
+    raw_mode = options.raw
 
     csvfile = sys.stdout
 
@@ -54,16 +63,17 @@ if __name__ == "__main__":
     program = GetCmd(None)
     os.chdir("crash")
 
+    envs = options.envs
     args = GetArgs()
     files = GetFiles()
 
     original_inputs = InputMutator(args, files, NullMutator)
-    mutated_inputs  = InputMutator(args, files, BruteForceMutator)
-    expanded_inputs = InputMutator(args, files, BruteForceExpander)
+    #mutated_inputs  = InputMutator(args, files, BruteForceMutator)
+    #expanded_inputs = InputMutator(args, files, BruteForceExpander)
     crazy_inputs    = RandomInputMutator(args, files, SurpriceMutator)
 
-    app = Process(program, no_stdout=no_stdout, outdir = None)
-    vec = Vectorizer("/tmp/test.csv", program)
+    app = Process(program, envs, no_stdout=no_stdout)
+    vec = Vectorizer("/tmp/test.csv", program, raw_mode)
 
     # unchanged input
     delta, original_input = original_inputs.next()
@@ -80,7 +90,7 @@ if __name__ == "__main__":
     #writer.writerow([program]+events)
     max_mut = 3000
 
-    for (i, (_, mutated)) in enumerate(expanded_inputs):
+    for (i, (_, mutated)) in enumerate(crazy_inputs):
       if app.timeouted():
         sys.exit(-1)
 

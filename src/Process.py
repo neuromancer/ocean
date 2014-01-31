@@ -10,10 +10,12 @@ from ptrace.ctypes_tools import (truncateWord,
     formatWordHex, formatAddress, formatAddressRange, word2bytes)
 
 from ptrace.signames import signalName, SIGNAMES
-from signal import SIGTRAP, SIGALRM, SIGABRT, SIGSEGV, SIGCHLD, SIGWINCH, SIGFPE, signal, alarm
+from signal import SIGTRAP, SIGALRM, SIGABRT, SIGSEGV, SIGCHLD, SIGWINCH, SIGFPE, SIGBUS, SIGTERM, SIGPIPE, signal, alarm
 from errno import ESRCH, EPERM
 from ptrace.cpu_info import CPU_POWERPC
 from ptrace.debugger import ChildError
+
+from time import sleep
 
 from Event import Exit, Abort, Timeout, Crash, Signal, Call, specs, hash_events
 
@@ -22,14 +24,15 @@ from Run import Launch
 from MemoryMap import MemoryMaps
 
 class Process(Application):
-    def __init__(self, program, outdir, no_stdout = False):
+    def __init__(self, program, envs, no_stdout = False):
 
         Application.__init__(self)  # no effect
 
         self.program = str(program)
         self.name = self.program.split("/")[-1]
-        self.outdir = str(outdir)
+        #self.outdir = str(outdir)
         self.no_stdout = no_stdout
+        self.envs = envs
 
         self.process = None
         self.pid = None
@@ -98,10 +101,23 @@ class Process(Application):
           self.mm  = MemoryMaps(self.program, self.pid)
           return [Signal("SIGFPE", self.process, self.mm), Crash(self.process, self.mm)]
 
+        elif signal.signum == SIGBUS:
+          self.crashed = True
+          self.mm  = MemoryMaps(self.program, self.pid)
+          return [Signal("SIGBUS", self.process, self.mm), Crash(self.process, self.mm)]
+
         elif signal.signum == SIGCHLD:
           self.crashed = True
           self.mm  = MemoryMaps(self.program, self.pid)
           return [Signal("SIGCHLD", self.process, self.pid), Crash(self.process, self.mm)]
+
+        elif signal.signum == SIGTERM: # killed by the kernel?
+          self.crashed = True
+          return []
+
+        # Harmless signals
+        elif signal.signum == SIGPIPE:
+          return [] # User generated, ignore.
 
         # Harmless signals
         elif signal.signum == SIGWINCH:
@@ -114,9 +130,9 @@ class Process(Application):
         return []
 
 
-    def createProcess(self, cmd, no_stdout):
+    def createProcess(self, cmd, envs, no_stdout):
 
-        self.pid = Launch(cmd, no_stdout, dict())
+        self.pid = Launch(cmd, no_stdout, envs)
         #self.ofiles = list(files)
         is_attached = True
 
@@ -205,7 +221,7 @@ class Process(Application):
 
         # Create new process
         try:
-            self.process = self.createProcess(cmd, self.no_stdout)
+            self.process = self.createProcess(cmd, self.envs, self.no_stdout)
             #self.mm  = MemoryMaps(self.program, self.pid)
             #print self.mm
             self.crashed = False
@@ -246,13 +262,13 @@ class Process(Application):
           return
 
         except OSError:
-          #print "OSError!"
+          print "OSError!"
           self.events.append(Timeout(timeout))
           self.timeouts += 1
           return
 
         except IOError:
-          #print "IOError!"
+          print "IOError!"
           self.events.append(Timeout(timeout))
           self.timeouts += 1
           return
@@ -270,8 +286,13 @@ class Process(Application):
 
         self.runProcess([self.program]+inputs)
 
+        #if self.crashed:
+        #  print "we should terminate.."
+        #sleep(3)
+
         self.process.terminate()
         self.process.detach()
+        #print "terminated!"
 
         self.process = None
         return self.events

@@ -53,6 +53,8 @@ class SurpriceMutator(Mutator):
 
   def next(self):
 
+    assert(self.input_len > 0)
+
     input = self.input.copy()
 
     m = random.sample(["s","e","se"],1)[0]

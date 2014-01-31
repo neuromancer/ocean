@@ -27,12 +27,8 @@ class Arg(Input):
   def GetSize(self):
     return len(self.data)
 
-  #def __BashEscape__(self, s):
-  #  return s.replace("'", "\\'")
-
   def PrepareData(self):
-    #return "\\\""+self.GetData()+"\\\""
-    #return "\'"+self.GetData()+"\'"
+
     return self.GetData()
 
   def IsValid(self):
@@ -49,6 +45,42 @@ class Arg(Input):
 
   def GetType(self):
     return "arg"
+
+
+class Env(Input):
+  def __init__(self, name, data):
+    self.name = name
+
+    self.data = str(data)
+    if ("\0" in data):
+      self.data = self.data.split("\0")[0]
+
+    self.size = len(self.data)
+
+  def GetData(self):
+    return str(self.data)
+
+  def GetSize(self):
+    return len(self.data)
+
+  def PrepareData(self):
+
+    return self.GetData()
+
+  def IsValid(self):
+    return self.size > 0
+
+  def __cmp__(self, arg):
+    return cmp(self.i, arg.i)
+
+  def copy(self):
+    return Arg(self.i, self.data)
+
+  def GetName(self):
+    return "env_"+str(self.i)
+
+  def GetType(self):
+    return "env"
 
 class File(Input):
   def __init__(self, filename, data):

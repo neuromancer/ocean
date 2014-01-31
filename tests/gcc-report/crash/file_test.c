@@ -1,5 +1,7 @@
 int main(int argc, char **argv) {
  
+ for (;;) ;
+
  int len = 0;
  int i = 0;
  char buf[128];

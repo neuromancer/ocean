@@ -7,9 +7,11 @@ from src.Types    import ptypes, isPtr, isNum, ptr32_ptypes, num32_ptypes, gener
 
 features = dict()
 vec_size = 0
+unit = ["()"]
+
 for name,args in specs.items():
   features[name+":ret_addr"] = (vec_size, ptr32_ptypes+generic_ptypes) # return address
-  vec_size = vec_size + len(num32_ptypes+generic_ptypes)
+  vec_size = vec_size + len(ptr32_ptypes+generic_ptypes)
   features[name+":ret_val"] = (vec_size, ptypes)                       # return value
   vec_size = vec_size + len(ptypes)
 
@@ -38,9 +40,34 @@ vec_size = vec_size + len(ptr32_ptypes+generic_ptypes)
 features["SIGSEGV:addr"] = (vec_size, ptr32_ptypes+generic_ptypes) # sigsegv faulty addr
 vec_size = vec_size + len(ptr32_ptypes+generic_ptypes)
 
+features["SIGABRT"] = (vec_size, unit) # sigsegv faulty addr
+vec_size = vec_size + len(unit)
+
+features["SIGFPE"] = (vec_size, unit) # sigsegv faulty addr
+vec_size = vec_size + len(unit)
+
+features["SIGBUS"] = (vec_size, unit) # sigsegv faulty addr
+vec_size = vec_size + len(unit)
+
+features["SIGCHLD"] = (vec_size, unit) # sigsegv faulty addr
+vec_size = vec_size + len(unit)
+
 n_features = vec_size
+
+#for pt in ptypes:
+#    print str(pt)
+
+#print vec_size
+#assert(0)
+
+#labels = sorted(features.items(), key=lambda (x,(i,y)): i)
+#for  f,(_,ts) in labels:
+#  for pt in ts:
+#    print str(f)+"="+str(pt)+"\t",
+#assert(0)
+
 #for f,(i,_) in features.items():
-#    print f,i
+#    print x,"=",y,"\t",
 
 #print n_features
 #assert(0)
@@ -74,23 +101,28 @@ n_features = vec_size
 # n_categories = len(categories)
 
 class Vectorizer:
-  def __init__(self, filename, pname):
+  def __init__(self, filename, pname, raw = False):
     self.tests = set()
     self.file = open(filename, "a")
     self.pname = pname
+    self.raw = raw
     #self.writer = csv.writer(csvfile, delimiter='\t')
 
   def encode(self, xs):
     r = zeros(n_features)
     #print self.pname, "\t",
     for x,y in xs:
-      #try:
-      #print x,"=",y,"\t",
-      i,categories = features[x]
-      categories = map(str, list(categories))
-      #print categories
-      j = categories.index(y)
-      r[i+j] = 1.0
+      try:
+        #print x,"=",y,"\t",
+        i,categories = features[x]
+        categories = map(str, list(categories))
+        #print categories
+        j = categories.index(y)
+        r[i+j] = 1.0
+      except ValueError:
+        print "Error:",x,y
+
+        assert(0)
 
     #print "\n-----"
 
@@ -124,6 +156,8 @@ class Vectorizer:
       if name == "SIGSEGV":
         #print fields[0]
         r.add((name+":addr",str(fields[0])))
+      else:
+        r.add((name,str(fields[0])))
 
     return r
 
@@ -138,14 +172,19 @@ class Vectorizer:
 
     events = list(r)
     events.sort()
-    #for event in events:
-    #  print event
 
     x = hash(tuple(events))
     if (x in self.tests):
       return
 
     self.tests.add(x)
+
+    if self.raw:
+      for x,y in events:
+        print str(x)+"="+str(y)+"\t",
+
+      print "\n",
+      return
     #print n_categories*n_features
 
     v = self.encode(events)

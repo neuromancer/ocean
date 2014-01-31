@@ -85,6 +85,6 @@ def GetPtype(ptype):
   elif isNum(ptype):
     return Type("Num32", 4)
   elif isVoid(ptype):
-    return Type("Bot32", 4, None)
+    return Type("Top32", 4)
   else:
-    return Type("Bot32", 4, None)
+    return Type("Top32", 4)

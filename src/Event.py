@@ -92,10 +92,12 @@ class Signal(Event):
     self.fields = dict()
     _sifields = process.getsiginfo()._sifields
 
-    if hasattr(_sifields, "_sigfault"):
+    self.name = name
+
+    if hasattr(_sifields, "_sigfault") and self.name == "SIGSEGV":
       self.fields["addr"] = RefinePType(Type("Ptr32",4), _sifields._sigfault._addr, process, mm)
 
-    self.name = name
+
 
   def __str__(self):
     return str(self.name)
