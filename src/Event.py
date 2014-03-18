@@ -167,7 +167,9 @@ class Crash(Event):
     #    value = getattr(self.raw_regs, name)
     #    self.regs[name] = hex(value).replace("L","")
 
+    #print hex(process.getInstrPointer())
     self.eip = RefinePType(Type("Ptr32",4), process.getInstrPointer(), process, mm)
+
 
     #ins = Decode(self.eip, process.readBytes(self.eip, 8), Decode32Bits)[0]
     #self.address, self.size, self.text, self.hexa = ins
