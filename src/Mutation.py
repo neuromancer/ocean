@@ -44,7 +44,7 @@ class Mutator:
   def GetDelta(self):
     assert(0)
 
-class SurpriceMutator(Mutator):
+class SurpriseMutator(Mutator):
 
   max_expansion = 10000
 
@@ -144,6 +144,8 @@ class NullMutator(Mutator):
 
   def GetInput(self):
     return self.input.copy()
+
+  #def GetData(self):
 
   def GetDelta(self):
     return None
@@ -335,7 +337,20 @@ class RandomInputMutator:
   def next(self, mutate = True):
     r = []
     delta = None
-    self.i = random.randrange(self.inputs_len)
+    #for i in self.inputs:
+    #  print str(i.input.GetName()),
+    #print ""
+    symb_inputs = filter(lambda (_,x): x.input.isSymbolic(), enumerate(self.inputs))
+    symb_inputs_len = len(symb_inputs)
+    #print symb_inputs
+
+    #for i in self.inputs:
+    #  print str(i.input.GetName()),
+    #print ""
+
+    self.i = symb_inputs[random.randrange(symb_inputs_len)][0]
+    #print self.i
+    #assert(0)
 
     for j, m in enumerate(self.arg_mutators + self.file_mutators):
       if self.i == j:
