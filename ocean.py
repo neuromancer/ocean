@@ -26,7 +26,7 @@ import sys
 
 from src.Process    import Process
 from src.Detection  import GetArgs, GetFiles, GetCmd, GetDir
-from src.Mutation   import BruteForceMutator, NullMutator, BruteForceExpander, SurpriceMutator ,InputMutator, RandomInputMutator
+from src.Mutation   import BruteForceMutator, NullMutator, BruteForceExpander, SurpriseMutator ,InputMutator, RandomInputMutator
 from src.Vectorizer import Vectorizer
 
 if __name__ == "__main__":
@@ -50,12 +50,17 @@ if __name__ == "__main__":
                         help="",
                         action="store_true", default=False)
 
+    parser.add_argument("--header", dest="header",
+                        help="",
+                        action="store_true", default=False)
+
     options = parser.parse_args()
     testcase = options.testcase
     #outdir = options.outdir
     no_stdout = options.no_stdout
     identify_mode = options.identify
     raw_mode = options.raw
+    write_header = options.header
 
     csvfile = sys.stdout
 
@@ -70,10 +75,14 @@ if __name__ == "__main__":
     original_inputs = InputMutator(args, files, NullMutator)
     #mutated_inputs  = InputMutator(args, files, BruteForceMutator)
     #expanded_inputs = InputMutator(args, files, BruteForceExpander)
-    crazy_inputs    = RandomInputMutator(args, files, SurpriceMutator)
+    crazy_inputs    = RandomInputMutator(args, files, SurpriseMutator)
 
     app = Process(program, envs, no_stdout=no_stdout)
-    vec = Vectorizer("/tmp/test.csv", program, raw_mode)
+    vec = Vectorizer("/dev/stdout", program, raw_mode)
+
+    if write_header:
+      vec.write_header()
+      exit(0)
 
     # unchanged input
     delta, original_input = original_inputs.next()

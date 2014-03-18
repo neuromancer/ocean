@@ -1,4 +1,5 @@
 import sys
+import csv
 from numpy import zeros, savetxt
 
 from src.Event    import Call, Crash, Abort, Signal, specs
@@ -106,7 +107,17 @@ class Vectorizer:
     self.file = open(filename, "a")
     self.pname = pname
     self.raw = raw
-    #self.writer = csv.writer(csvfile, delimiter='\t')
+    self.writer = csv.writer(self.file, delimiter='\t')
+
+  def write_header(self):
+
+    labels = sorted(features.items(), key=lambda (x,(i,y)): i)
+    for  f,(_,ts) in labels:
+      for pt in ts:
+        print str(f)+"="+str(pt)+"\t",
+    #self.writer.writerow(map(lambda f,(i,_): f+"="+str(i), features.items()))
+    #for f,(i,_) in features.items():
+    #print x,"=",y,"\t",
 
   def encode(self, xs):
     r = zeros(n_features)
