@@ -262,13 +262,13 @@ class Process(Application):
           return
 
         except OSError:
-          print "OSError!"
+          #print "OSError!"
           self.events.append(Timeout(timeout))
           self.timeouts += 1
           return
 
         except IOError:
-          print "IOError!"
+          #print "IOError!"
           self.events.append(Timeout(timeout))
           self.timeouts += 1
           return
