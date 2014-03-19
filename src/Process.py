@@ -290,6 +290,9 @@ class Process(Application):
         #  print "we should terminate.."
         #sleep(3)
 
+        if self.process is None:
+          return None
+
         self.process.terminate()
         self.process.detach()
         #print "terminated!"

@@ -87,6 +87,11 @@ if __name__ == "__main__":
     # unchanged input
     delta, original_input = original_inputs.next()
     original_events = app.getData(original_input)
+
+    if original_events is None:
+        print "Execution of",program,"failed!"
+        exit(-1)
+
     #exit(0)
 
     #if not os.path.isdir(outdir):
