@@ -54,6 +54,9 @@ if __name__ == "__main__":
                         help="",
                         action="store_true", default=False)
 
+    parser.add_argument("-n", dest="max_mut", type=int,
+                        help="", default=100)
+
     options = parser.parse_args()
     testcase = options.testcase
     #outdir = options.outdir
@@ -61,6 +64,7 @@ if __name__ == "__main__":
     identify_mode = options.identify
     raw_mode = options.raw
     write_header = options.header
+    max_mut = options.max_mut
 
     csvfile = sys.stdout
 
@@ -102,17 +106,18 @@ if __name__ == "__main__":
     #assert(0)
     #events = vectorizer(original_events)
     #writer.writerow([program]+events)
-    max_mut = 3000
+
 
     for (i, (_, mutated)) in enumerate(crazy_inputs):
       if app.timeouted():
         sys.exit(-1)
 
+      if i >= max_mut:
+        break
+
       events = app.getData(mutated)
       vec.vectorize(events)
 
-      if i > max_mut:
-        break
 
       # x = hash_events(events)
       #
