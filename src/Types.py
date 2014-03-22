@@ -67,7 +67,7 @@ ptr32_ptypes   = ptypes[1:9]
 generic_ptypes = [Type("Top32", 4, None)]
 
 def isNum(ptype):
-  return ptype in ["int", "ulong", "long"]
+  return ptype in ["int", "ulong", "long", "char"]
 
 def isPtr(ptype):
   return "addr" in ptype or "*" in ptype or "string" in ptype or "format" in ptype or "file" in ptype
