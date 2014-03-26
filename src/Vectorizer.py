@@ -181,6 +181,15 @@ class Vectorizer:
       #print event
       r.update(self.preprocess(event))
 
+    if self.raw:
+      for event in events:
+        for x,y in list(self.preprocess(event)):
+          print str(x)+"="+str(y)+"\t",
+
+      print "\n",
+      return
+
+
     events = list(r)
     events.sort()
 
@@ -190,12 +199,12 @@ class Vectorizer:
 
     self.tests.add(x)
 
-    if self.raw:
-      for x,y in events:
-        print str(x)+"="+str(y)+"\t",
+    #if self.raw:
+    #  for x,y in events:
+    #    print str(x)+"="+str(y)+"\t",
 
-      print "\n",
-      return
+    #  print "\n",
+    #  return
     #print n_categories*n_features
 
     v = self.encode(events)
