@@ -7,14 +7,19 @@ class MemoryMaps:
   def update(self):
 
     self.mm = dict()
+    self.atts = dict()
+
     for line in open('/proc/'+str(self.pid)+'/maps'):
       line = line.replace("\n", "")
       #print line
       x = line.split(" ")
+
       mrange = x[0].split("-")
       mrange = map(lambda s: int(s, 16), mrange)
       #print tuple(mrange)
+
       self.mm[tuple(mrange)] = x[-1]
+      self.atts[tuple(mrange)] = x[1]
 
   def isStackPtr(self, ptr):
     for (mrange,zone) in self.mm.items():
@@ -59,6 +64,13 @@ class MemoryMaps:
     r = ""
     for (mrange,zone) in self.mm.items():
       r = r + hex(mrange[0])+" - "+hex(mrange[1])+" -> "+zone+"\n"
+    return r
+
+  def items(self):
+    r = []
+    for (x,y) in self.mm.items():
+      r.append((x,y,self.atts[x]))
+
     return r
 
 

@@ -16,6 +16,25 @@ def check(f):
 check(_READELF)
 check(_OBJDUMP)
 
+# def symbols(file):
+#     import re, subprocess
+#     symbols = {}
+#     # -s : symbol table
+#     cmd = [_READELF, '-s', file]
+#     out = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
+#     field = '\s+(\S+)'
+#     lines = re.findall('^\s+\d+:' + field * 7 + '$', out, re.MULTILINE)
+#
+#     for addr, size, type, _bind, _vis, _ndx, name in lines:
+#         addr = int(addr, 16)
+#         size = int(size, 10)
+#         if addr <> 0 and name <> '':
+#             symbols[name] = {'addr': addr,
+#                              'size': size,
+#                              'type': type,
+#                              }
+#     return symbols
+
 def plt_got(path):
   plt, got = dict(), dict()
 
@@ -38,31 +57,25 @@ def plt_got(path):
 
   return plt, got
 
+def entrypoint(path):
+    cmd = [_READELF, '-hWS', path]
+    out = subprocess.check_output(cmd)
 
-#def symbols(file):
-#    import re, subprocess
-#    symbols = {}
-#    # -s : symbol table
-#    cmd = [_READELF, '-s', file]
-#    out = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
-#    field = '\s+(\S+)'
-#    lines = re.findall('^\s+\d+:' + field * 7 + '$', out, re.MULTILINE)
-#
-#    for addr, size, type, _bind, _vis, _ndx, name in lines:
-#        addr = int(addr, 16)
-#        size = int(size, 10)
-#        if addr <> 0 and name <> '':
-#            symbols[name] = {'addr': addr,
-#                             'size': size,
-#                             'type': type,
-#                             }
-#    return symbols
+    #elfclass = re.findall('Class:\s*(.*$)', out, re.MULTILINE)[0]
+    entrypoint = int(re.findall('Entry point address:\s*(.*$)', out, re.MULTILINE)[0], 16)
+
+    return entrypoint
 
 class ELF:
   '''A parsed ELF file'''
 
   def __init__(self, path):
     self.path = str(path)
+    self.sections = dict()
+
+    self.entrypoint = entrypoint(path)
+    self._load_sections()
+
     self.plt, self.got = plt_got(self.path)
     self.name2addr = self.plt
     self.addr2name = dict()
@@ -75,6 +88,31 @@ class ELF:
 
     for (name, addr) in self.name2func.items():
       self.func2name[addr] = name
+
+
+  def _load_sections(self):
+    # -W : Wide output
+    # -S : Section headers
+    cmd = [_READELF, '-W', '-S', self.path]
+    out = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
+    field = '\s+(\S+)'
+    posint = '[123456789]\d*'
+    flags = '\s+([WAXMSILGTExOop]*)'
+    lines = re.findall('^\s+\[\s*' + posint + '\]' + field * 6 + flags, out, re.MULTILINE)
+
+    for name, _type, addr, off, size, _es, flgs in lines:
+      addr = int(addr, 16)
+      off = int(off, 16)
+      size = int(size, 16)
+      self.sections[name] = {'addr'  : addr,
+                             'offset': off,
+                             'size'  : size,
+                             'flags' : flgs,
+                             }
+
+
+  def GetEntrypoint(self):
+    return self.entrypoint
 
   def GetFunctions(self):
     return self.name2func.keys()

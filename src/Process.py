@@ -41,6 +41,7 @@ class Process(Application):
 
         # Parse ELF
         self.elf = ELF(self.program)
+        self.libs = dict()
 
         self.last_signal = {}
         self.last_call = None
@@ -51,6 +52,12 @@ class Process(Application):
         #self.breaks = dict()
 
         #self.followterms = []
+
+    def setBreakpoints(self, elf, base = 0x0):
+      for func_name in elf.GetFunctions():
+        if func_name in specs:
+          print func_name, hex(base+ elf.FindFuncInPlt(func_name))
+          self.breakpoint(base + elf.FindFuncInPlt(func_name))
 
 
     def createEvents(self, signal):
@@ -65,7 +72,28 @@ class Process(Application):
             if breakpoint:
                 name = self.elf.FindAddrInPlt(breakpoint.address)
 
-                if name is None:
+                if ip == self.elf.GetEntrypoint():
+                  breakpoint.desinstall(set_ip=True)
+                  self.mm  = MemoryMaps(self.program, self.pid)
+                  #print self.mm
+
+                  for (range, lib, atts) in self.mm.items():
+                    if "/" in lib and 'x' in atts and lib <> self.program and not (lib in self.libs): #and False:
+
+                      self.libs[lib] = ELF(lib)
+                      self.setBreakpoints(self.libs[lib], base = range[0])
+                      print "hooking",lib
+
+                      #print self.libs[lib].sections
+                      #plt_addr = 0x0#self.libs[lib].sections[".plt"]["addr"]
+                      #for (f, o) in self.libs[lib].plt.items():
+                      #  if f in "free":
+                      #    print f, hex(range[0]+plt_addr+o)
+
+
+                  return []
+
+                elif name is None:
                   #last_call = self.events[-1]
                   assert(self.last_call <> None)
                   #print breakpoint.address, self.last_call.GetReturnAddr()
@@ -80,7 +108,7 @@ class Process(Application):
 
                 else:
                   call = Call(name)
-                  self.mm  = MemoryMaps(self.program, self.pid)
+                  self.mm.update()  #= MemoryMaps(self.program, self.pid)
 
                   call.DetectParams(self.process, self.mm)
                   self.last_call = call
@@ -241,10 +269,12 @@ class Process(Application):
 
 
         # Set the breakpoints
+        self.breakpoint(self.elf.GetEntrypoint())
 
-        for func_name in self.elf.GetFunctions():
-          if func_name in specs:
-            self.breakpoint(self.elf.FindFuncInPlt(func_name))
+        self.setBreakpoints(self.elf)
+        #for func_name in self.elf.GetFunctions():
+        #  if func_name in specs:
+        #    self.breakpoint(self.elf.FindFuncInPlt(func_name))
 
         try:
           while True:
