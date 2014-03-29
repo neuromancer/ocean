@@ -35,7 +35,7 @@ check(_OBJDUMP)
 #                              }
 #     return symbols
 
-def plt_got(path):
+def plt_got(path, base):
   plt, got = dict(), dict()
 
   cmd = [_OBJDUMP, '-d', path]
@@ -52,7 +52,7 @@ def plt_got(path):
      except ValueError:
        gotaddr = None
 
-     plt[name] = addr
+     plt[name] = base + addr
      got[name] = gotaddr
 
   return plt, got
@@ -69,14 +69,15 @@ def entrypoint(path):
 class ELF:
   '''A parsed ELF file'''
 
-  def __init__(self, path):
+  def __init__(self, path, base = 0x0):
     self.path = str(path)
+    self.base = base
     self.sections = dict()
 
     self.entrypoint = entrypoint(path)
     self._load_sections()
 
-    self.plt, self.got = plt_got(self.path)
+    self.plt, self.got = plt_got(self.path, self.base)
     self.name2addr = self.plt
     self.addr2name = dict()
 
@@ -116,6 +117,9 @@ class ELF:
 
   def GetFunctions(self):
     return self.name2func.keys()
+
+  def GetModname(self):
+    return str(self.path)
 
   def FindFuncInPlt(self, name):
 

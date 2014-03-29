@@ -41,23 +41,30 @@ class Process(Application):
 
         # Parse ELF
         self.elf = ELF(self.program)
-        self.libs = dict()
+        self.modules = dict()
 
         self.last_signal = {}
         self.last_call = None
         self.crashed = False
         self.events = []
 
-        # FIXME: Remove self.breaks!
-        #self.breaks = dict()
+        self.binfo = dict()
 
         #self.followterms = []
 
-    def setBreakpoints(self, elf, base = 0x0):
+    def setBreakpoints(self, elf):
       for func_name in elf.GetFunctions():
         if func_name in specs:
-          print func_name, hex(base+ elf.FindFuncInPlt(func_name))
-          self.breakpoint(base + elf.FindFuncInPlt(func_name))
+          #print func_name, hex(elf.FindFuncInPlt(func_name))
+          addr = elf.FindFuncInPlt(func_name)
+          self.binfo[addr] = elf.GetModname(),func_name
+          self.breakpoint(addr)
+
+    def findBreakpointInfo(self, addr):
+      if addr in self.binfo:
+        return self.binfo[addr]
+      else:
+        return None, None
 
 
     def createEvents(self, signal):
@@ -70,25 +77,34 @@ class Process(Application):
                 ip -= 1
             breakpoint = self.process.findBreakpoint(ip)
             if breakpoint:
-                name = self.elf.FindAddrInPlt(breakpoint.address)
+                module, name = self.findBreakpointInfo(breakpoint.address)
 
                 if ip == self.elf.GetEntrypoint():
                   breakpoint.desinstall(set_ip=True)
+
                   self.mm  = MemoryMaps(self.program, self.pid)
+                  self.setBreakpoints(self.elf)
+
+
                   #print self.mm
 
-                  for (range, lib, atts) in self.mm.items():
-                    if "/" in lib and 'x' in atts and lib <> self.program and not (lib in self.libs): #and False:
-
-                      self.libs[lib] = ELF(lib)
-                      self.setBreakpoints(self.libs[lib], base = range[0])
-                      print "hooking",lib
-
-                      #print self.libs[lib].sections
-                      #plt_addr = 0x0#self.libs[lib].sections[".plt"]["addr"]
-                      #for (f, o) in self.libs[lib].plt.items():
-                      #  if f in "free":
-                      #    print f, hex(range[0]+plt_addr+o)
+                  # for (range, lib, atts) in self.mm.items():
+                  #   if "/" in lib and 'x' in atts and not (lib in self.libs):
+                  #
+                  #     if lib == self.elf.path:
+                  #         base = 0
+                  #     else:
+                  #         base = range[0]
+                  #
+                  #     self.libs[lib] = ELF(lib, base)
+                  #     self.setMyBreakpoints(self.libs[lib])
+                  #     print "hooking",lib
+                  #
+                  #     #print self.libs[lib].sections
+                  #     #plt_addr = 0x0#self.libs[lib].sections[".plt"]["addr"]
+                  #     #for (f, o) in self.libs[lib].plt.items():
+                  #     #  if f in "free":
+                  #     #    print f, hex(range[0]+plt_addr+o)
 
 
                   return []
@@ -108,7 +124,7 @@ class Process(Application):
 
                 else:
                   call = Call(name)
-                  self.mm.update()  #= MemoryMaps(self.program, self.pid)
+                  self.mm.update()
 
                   call.DetectParams(self.process, self.mm)
                   self.last_call = call
@@ -271,7 +287,7 @@ class Process(Application):
         # Set the breakpoints
         self.breakpoint(self.elf.GetEntrypoint())
 
-        self.setBreakpoints(self.elf)
+        #self.setBreakpoints(self.elf)
         #for func_name in self.elf.GetFunctions():
         #  if func_name in specs:
         #    self.breakpoint(self.elf.FindFuncInPlt(func_name))
@@ -292,13 +308,11 @@ class Process(Application):
           return
 
         except OSError:
-          #print "OSError!"
           self.events.append(Timeout(timeout))
           self.timeouts += 1
           return
 
         except IOError:
-          #print "IOError!"
           self.events.append(Timeout(timeout))
           self.timeouts += 1
           return
