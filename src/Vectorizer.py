@@ -175,29 +175,31 @@ class Vectorizer:
 
   def vectorize(self,events):
 
-    r = set()
+    #r = set()
+    r = list()
 
     for event in events:
       #print event
-      r.update(self.preprocess(event))
+      r = r + list(self.preprocess(event))
 
-    if self.raw:
-      for event in events:
-        for x,y in list(self.preprocess(event)):
-          print str(x)+"="+str(y)+"\t",
-
-      print "\n",
-      return
-
-
-    events = list(r)
-    events.sort()
+    #events = list(r)
+    #events.sort()
+    events = r
 
     x = hash(tuple(events))
     if (x in self.tests):
       return
 
     self.tests.add(x)
+
+    if self.raw:
+      for x,y in events:
+        #x,y = event
+        print str(x)+"="+str(y)+"\t",
+
+      print "\n",
+      return
+
 
     #if self.raw:
     #  for x,y in events:
