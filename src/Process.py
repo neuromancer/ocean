@@ -4,7 +4,7 @@ from ptrace.debugger import (PtraceDebugger, Application,
     ProcessExecution, ProcessError)
 
 from logging import getLogger, info, warning, error
-from ptrace.error import PTRACE_ERRORS, writeError
+from ptrace.error import PTRACE_ERRORS, PtraceError, writeError
 from ptrace.disasm import HAS_DISASSEMBLER
 from ptrace.ctypes_tools import (truncateWord,
     formatWordHex, formatAddress, formatAddressRange, word2bytes)
@@ -36,6 +36,7 @@ class Process(Application):
 
         self.process = None
         self.pid = None
+        self.mm = None
         self.timeouts = 0
         self.max_timeouts = 10
 
@@ -76,40 +77,38 @@ class Process(Application):
                 # Go before "INT 3" instruction
                 ip -= 1
             breakpoint = self.process.findBreakpoint(ip)
+            #print "breakpoint @",hex(ip)
+            
             if breakpoint:
                 module, name = self.findBreakpointInfo(breakpoint.address)
+                #print module, name, hex(ip)
 
                 if ip == self.elf.GetEntrypoint():
                   breakpoint.desinstall(set_ip=True)
 
+                  #if self.mm is None:
                   self.mm  = MemoryMaps(self.program, self.pid)
-                  self.setBreakpoints(self.elf)
-
+                  #self.setBreakpoints(self.elf)
 
                   #print self.mm
 
-                  # for (range, lib, atts) in self.mm.items():
-                  #   if "/" in lib and 'x' in atts and not (lib in self.libs):
-                  #
-                  #     if lib == self.elf.path:
-                  #         base = 0
-                  #     else:
-                  #         base = range[0]
-                  #
-                  #     self.libs[lib] = ELF(lib, base)
-                  #     self.setMyBreakpoints(self.libs[lib])
-                  #     print "hooking",lib
-                  #
-                  #     #print self.libs[lib].sections
-                  #     #plt_addr = 0x0#self.libs[lib].sections[".plt"]["addr"]
-                  #     #for (f, o) in self.libs[lib].plt.items():
-                  #     #  if f in "free":
-                  #     #    print f, hex(range[0]+plt_addr+o)
+                  for (range, mod, atts) in self.mm.items():
+                     if "/" in mod and 'x' in atts and not ("libc-" in mod):
+                  
+                        if mod == self.elf.path:
+                           base = 0
+                        else:
+                           base = range[0]
+ 
+                        if not (mod in self.modules):
+                          self.modules[mod] = ELF(mod, base)
 
-
+                        self.setBreakpoints(self.modules[mod])
+            
                   return []
 
                 elif name is None:
+                  #print "unhoking return address"
                   #last_call = self.events[-1]
                   assert(self.last_call <> None)
                   #print breakpoint.address, self.last_call.GetReturnAddr()
@@ -118,17 +117,22 @@ class Process(Application):
                   if (breakpoint.address == self.last_call.GetReturnAddr()):
                     self.last_call.DetectReturnValue(self.process)
                   else:
-                    pass # FIXME: Why this could happen?
+                    pass # FIXME: Why this could happen? setjmp/longjmp?
 
                   return []
 
                 else:
-                  call = Call(name)
+                  call = Call(name, module) 
                   self.mm.update()
-
                   call.DetectParams(self.process, self.mm)
                   self.last_call = call
+                  #print "hooking return address"
                   self.breakpoint(call.GetReturnAddr())
+
+                  breakpoint.desinstall(set_ip=True)
+                  self.process.singleStep()
+                  self.breakpoint(breakpoint.address)
+
                   return [call]
 
         elif signal.signum == SIGABRT:
@@ -197,11 +201,12 @@ class Process(Application):
 
         #self.debugger.deleteProcess(self.process)
         #self.process.(SIGUSR2)
-        print "end!"
+        #print "end!"
         #self.process.detach()
 
 
     def _continueProcess(self, process, signum=None):
+        #print "begin _cont", self.last_signal
         if not signum and process in self.last_signal:
             signum = self.last_signal[process]
 
@@ -216,6 +221,8 @@ class Process(Application):
             process.cont()
 
     def cont(self, signum=None):
+        #print "begin cont", signum
+
         for process in self.debugger:
             process.syscall_state.clear()
             if process == self.process:
@@ -223,6 +230,7 @@ class Process(Application):
             else:
                 self._continueProcess(process)
 
+        #print "midle cont"
         # Wait for a process signal
         signal = self.debugger.waitSignals()
         process = signal.process
@@ -260,7 +268,7 @@ class Process(Application):
         #print ".",
 
         signal(SIGALRM, lambda s,a: ())
-        timeout = 3
+        timeout = 1000
         alarm(timeout)
 
         # Create new process
@@ -294,13 +302,19 @@ class Process(Application):
 
         try:
           while True:
+            #self.cont()
+           
             if not self.debugger or self.crashed:
                 # There is no more process: quit
                 return
+            else:
+              self.cont()
 
-            self.cont()
-
+          #alarm(0)
+        except PtraceError:
+          #print "deb:",self.debugger, "crash:", self.crashed
           alarm(0)
+          return        
 
         except ProcessExit, event:
           alarm(0)
@@ -329,6 +343,7 @@ class Process(Application):
         self.debugger = PtraceDebugger()
 
         self.runProcess([self.program]+inputs)
+        #print self.pid
 
         #if self.crashed:
         #  print "we should terminate.."

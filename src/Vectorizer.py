@@ -150,7 +150,7 @@ class Vectorizer:
       r.add((name+":ret_val",str(args[1])))
 
       for (index, arg) in enumerate(args[2:]):
-        r.add((name+"_"+str(index),str(arg)))
+        r.add((name+":"+str(index),str(arg)))
         #print r
     elif isinstance(event, Abort):
       (name, fields) = event.GetTypedName()
@@ -195,7 +195,8 @@ class Vectorizer:
     if self.raw:
       for x,y in events:
         #x,y = event
-        print str(x)+"="+str(y)+"\t",
+        print str(x)+"="+str(y)+" ",
+        #assert(not ("abort" in str(x)))  
 
       print "\n",
       return

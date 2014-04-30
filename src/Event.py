@@ -6,46 +6,30 @@ from Analysis import RefinePType
 #from distorm import Decode, Decode32Bits
 
 class Event:
+  module = None
   def __init__(self):
     pass
 
 class Call(Event):
 
-  def __init__(self, name):
+  def __init__(self, name, module):
 
     assert(name in specs)
     spec = specs[name]
     self.ret = str(spec[0])
     #fixme: void functions and non-returned values should be different!
     self.retvalue = (Type("Top32",4),None)
+    self.module = module
     self.name = str(name)
     self.param_types = list(spec[1:])
     self.param_ptypes = []
     self.param_values = []
-    self.dim = 256
-    self.v = None
+    #self.dim = 256
+    #self.v = None
 
   def __str__(self):
     return "call"
-    pass
-    """
-    if self.param_values == []:
-      #return str(self.ret + " " + self.name + "(" + ",".join(self.param_types) + ")")
-      return str(self.name)
-    else:
-      params   = map(GetPtypeStr, zip(self.param_types,self.param_values))
-
-      if self.retvalue is None:
-        retvalue = ".."
-      else:
-        retvalue = GetPtypeStr((self.ret, self.retvalue))
-
-      retaddr  = GetPtypeStr(("addr", self.retaddr))
-
-      return retaddr + ": " + self.name + "(" + ", ".join(params) + ")" + " = " + retvalue
-      #return str([self.ret, self.name] +self.param_values)
-    """
-
+    
   def __DetectRetAddr__(self):
     addr = self.process.getreg("esp")
     bytes = self.process.readBytes(addr, 4)
@@ -84,7 +68,7 @@ class Call(Event):
 
   def GetTypedName(self):
 
-    return (str(self.name), [self.retaddr[0],self.retvalue[0]]+list(self.param_ptypes))
+    return (str(self.name)+'@'+str(self.module), [self.retaddr[0],self.retvalue[0]]+list(self.param_ptypes))
 
 class Signal(Event):
   def __init__(self, name, process, mm): #_sifields = None):
@@ -96,6 +80,7 @@ class Signal(Event):
 
     if hasattr(_sifields, "_sigfault") and self.name == "SIGSEGV":
       self.fields["addr"] = RefinePType(Type("Ptr32",4), _sifields._sigfault._addr, process, mm)
+      #print "sigfault @",  _sifields._sigfault._addr
 
 
 
@@ -167,7 +152,7 @@ class Crash(Event):
     #    value = getattr(self.raw_regs, name)
     #    self.regs[name] = hex(value).replace("L","")
 
-    #print hex(process.getInstrPointer())
+    #print "crash @",hex(process.getInstrPointer())
     self.eip = RefinePType(Type("Ptr32",4), process.getInstrPointer(), process, mm)
 
 
