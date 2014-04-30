@@ -27,7 +27,7 @@ import sys
 from src.Process    import Process
 from src.Detection  import GetArgs, GetFiles, GetCmd, GetDir
 from src.Mutation   import BruteForceMutator, NullMutator, BruteForceExpander, SurpriseMutator ,InputMutator, RandomInputMutator
-from src.Vectorizer import Vectorizer
+from src.Printer    import Printer
 
 if __name__ == "__main__":
     # Arguments
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     crazy_inputs    = RandomInputMutator(args, files, SurpriseMutator)
 
     app = Process(program, envs, no_stdout= not show_stdout )
-    vec = Vectorizer("/dev/stdout", program, True)
+    prt = Printer("/dev/stdout", program)
 
     #if write_header:
     #  vec.write_header()
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     #  os.mkdir(outdir)
 
     #writer.writerow([program]+map(lambda (x,y): x+"="+y, original_events.items()))
-    vec.vectorize(original_events)
+    prt.print_events(original_events)
     #assert(0)
     #events = vectorizer(original_events)
     #writer.writerow([program]+events)
@@ -116,7 +116,7 @@ if __name__ == "__main__":
         break
 
       events = app.getData(mutated)
-      vec.vectorize(events)
+      prt.print_events(events)
 
 
       # x = hash_events(events)
