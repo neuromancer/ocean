@@ -34,36 +34,36 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='xxx')
     parser.add_argument("testcase", help="Testcase to use", type=str, default=None)
     #parser.add_argument("outdir", help="Output directory to use", type=str, default=".")
-    parser.add_argument("--no-stdout",
-                        help="Use /dev/null as stdout/stderr, or close stdout and stderr if /dev/null doesn't exist",
+    parser.add_argument("--show-stdout",
+                        help="Don't use /dev/null as stdout/stderr, nor close stdout and stderr if /dev/null doesn't exist",
                         action="store_true", default=False)
 
-    parser.add_argument("--identify",
-                        help="No mutations are performed, only the original input is processed",
-                        action="store_true", default=False)
+    #parser.add_argument("--identify",
+    #                    help="No mutations are performed, only the original input is processed",
+    #                    action="store_true", default=False)
 
     parser.add_argument("--X-program", dest="envs",
                         help="",
                         action="store_const", const=dict(DISPLAY=":0"), default=dict())
 
-    parser.add_argument("--raw-mode", dest="raw",
-                        help="",
-                        action="store_true", default=False)
+    #parser.add_argument("--raw-mode", dest="raw",
+    #                    help="",
+    #                    action="store_true", default=False)
 
-    parser.add_argument("--header", dest="header",
-                        help="",
-                        action="store_true", default=False)
+    #parser.add_argument("--header", dest="header",
+    #                    help="",
+    #                    action="store_true", default=False)
 
     parser.add_argument("-n", dest="max_mut", type=int,
-                        help="", default=100)
+                        help="", default=0)
 
     options = parser.parse_args()
     testcase = options.testcase
     #outdir = options.outdir
-    no_stdout = options.no_stdout
-    identify_mode = options.identify
-    raw_mode = options.raw
-    write_header = options.header
+    show_stdout = options.show_stdout
+    #identify_mode = options.identify
+    #raw_mode = options.raw
+    #write_header = options.header
     max_mut = options.max_mut
 
     csvfile = sys.stdout
@@ -81,12 +81,12 @@ if __name__ == "__main__":
     #expanded_inputs = InputMutator(args, files, BruteForceExpander)
     crazy_inputs    = RandomInputMutator(args, files, SurpriseMutator)
 
-    app = Process(program, envs, no_stdout=no_stdout)
-    vec = Vectorizer("/dev/stdout", program, raw_mode)
+    app = Process(program, envs, no_stdout= not show_stdout )
+    vec = Vectorizer("/dev/stdout", program, True)
 
-    if write_header:
-      vec.write_header()
-      exit(0)
+    #if write_header:
+    #  vec.write_header()
+    #  exit(0)
 
     # unchanged input
     delta, original_input = original_inputs.next()
