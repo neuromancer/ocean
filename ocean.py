@@ -38,21 +38,9 @@ if __name__ == "__main__":
                         help="Don't use /dev/null as stdout/stderr, nor close stdout and stderr if /dev/null doesn't exist",
                         action="store_true", default=False)
 
-    #parser.add_argument("--identify",
-    #                    help="No mutations are performed, only the original input is processed",
-    #                    action="store_true", default=False)
-
     parser.add_argument("--X-program", dest="envs",
                         help="",
                         action="store_const", const=dict(DISPLAY=":0"), default=dict())
-
-    #parser.add_argument("--raw-mode", dest="raw",
-    #                    help="",
-    #                    action="store_true", default=False)
-
-    #parser.add_argument("--header", dest="header",
-    #                    help="",
-    #                    action="store_true", default=False)
 
     parser.add_argument("-n", dest="max_mut", type=int,
                         help="", default=0)
@@ -61,9 +49,6 @@ if __name__ == "__main__":
     testcase = options.testcase
     #outdir = options.outdir
     show_stdout = options.show_stdout
-    #identify_mode = options.identify
-    #raw_mode = options.raw
-    #write_header = options.header
     max_mut = options.max_mut
 
     csvfile = sys.stdout
@@ -84,10 +69,6 @@ if __name__ == "__main__":
     app = Process(program, envs, no_stdout= not show_stdout )
     prt = Printer("/dev/stdout", program)
 
-    #if write_header:
-    #  vec.write_header()
-    #  exit(0)
-
     # unchanged input
     delta, original_input = original_inputs.next()
     original_events = app.getData(original_input)
@@ -96,17 +77,7 @@ if __name__ == "__main__":
         print "Execution of",program,"failed!"
         exit(-1)
 
-    #exit(0)
-
-    #if not os.path.isdir(outdir):
-    #  os.mkdir(outdir)
-
-    #writer.writerow([program]+map(lambda (x,y): x+"="+y, original_events.items()))
     prt.print_events(original_events)
-    #assert(0)
-    #events = vectorizer(original_events)
-    #writer.writerow([program]+events)
-
 
     for (i, (_, mutated)) in enumerate(crazy_inputs):
       if app.timeouted():

@@ -268,7 +268,7 @@ class Process(Application):
         #print ".",
 
         signal(SIGALRM, lambda s,a: ())
-        timeout = 1000
+        timeout = 100
         alarm(timeout)
 
         # Create new process
@@ -294,11 +294,6 @@ class Process(Application):
 
         # Set the breakpoints
         self.breakpoint(self.elf.GetEntrypoint())
-
-        #self.setBreakpoints(self.elf)
-        #for func_name in self.elf.GetFunctions():
-        #  if func_name in specs:
-        #    self.breakpoint(self.elf.FindFuncInPlt(func_name))
 
         try:
           while True:
