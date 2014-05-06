@@ -33,10 +33,16 @@ if __name__ == "__main__":
     # Arguments
     parser = argparse.ArgumentParser(description='xxx')
     parser.add_argument("testcase", help="Testcase to use", type=str, default=None)
+    parser.add_argument("mode", help="Print mode to use", type=str, default="split")
+    #
     #parser.add_argument("outdir", help="Output directory to use", type=str, default=".")
     parser.add_argument("--show-stdout",
                         help="Don't use /dev/null as stdout/stderr, nor close stdout and stderr if /dev/null doesn't exist",
                         action="store_true", default=False)
+  
+    parser.add_argument("--modfile",
+                        help="",
+                        type=str, default=None)
 
     parser.add_argument("--X-program", dest="envs",
                         help="",
@@ -47,7 +53,8 @@ if __name__ == "__main__":
 
     options = parser.parse_args()
     testcase = options.testcase
-    #outdir = options.outdir
+    print_mode = options.mode
+    modfile = options.modfile
     show_stdout = options.show_stdout
     max_mut = options.max_mut
 
@@ -55,18 +62,30 @@ if __name__ == "__main__":
 
     os.chdir(GetDir(testcase))
     program = GetCmd(None)
+
+    #os.system('ldd '+program)
+    #exit(0)
+
     os.chdir("crash")
 
     envs = options.envs
     args = GetArgs()
     files = GetFiles()
 
+    # modules to hook
+    hooked_mods = [] 
+    if modfile is not None:
+      hooked_mods =  open(modfile).read().split("\n")
+      hooked_mods = filter(lambda x: x <> '', hooked_mods) 
+    
+    #print hooked_mods
+    #assert(0)
     original_inputs = InputMutator(args, files, NullMutator)
     #mutated_inputs  = InputMutator(args, files, BruteForceMutator)
     #expanded_inputs = InputMutator(args, files, BruteForceExpander)
     crazy_inputs    = RandomInputMutator(args, files, SurpriseMutator)
 
-    app = Process(program, envs, no_stdout= not show_stdout )
+    app = Process(program, envs, hooked_mods = hooked_mods, no_stdout = not show_stdout )
     prt = Printer("/dev/stdout", program)
 
     # unchanged input
@@ -77,7 +96,7 @@ if __name__ == "__main__":
         print "Execution of",program,"failed!"
         exit(-1)
 
-    prt.print_events(original_events)
+    prt.print_events(original_events, print_mode)
 
     for (i, (_, mutated)) in enumerate(crazy_inputs):
       if app.timeouted():
@@ -87,7 +106,7 @@ if __name__ == "__main__":
         break
 
       events = app.getData(mutated)
-      prt.print_events(events)
+      prt.print_events(events, print_mode)
 
 
       # x = hash_events(events)

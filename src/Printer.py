@@ -20,7 +20,7 @@ class Printer:
       #print event.name, event.param_types, event.ret, event.retaddr, event.retvalue
       (name, args) = event.GetTypedName()
 
-      r.add((name+":ret_addr",str(args[0])))
+      #r.add((name+":ret_addr",str(args[0])))
       r.add((name+":ret_val",str(args[1])))
 
       for (index, arg) in enumerate(args[2:]):
@@ -29,7 +29,8 @@ class Printer:
     elif isinstance(event, Abort):
       (name, fields) = event.GetTypedName()
       r.add((name+":eip",str(fields[0])))
-
+    
+    """
     elif isinstance(event, Crash):
       (name, fields) = event.GetTypedName()
       r.add((name+":eip",str(fields[0])))
@@ -43,12 +44,45 @@ class Printer:
         r.add((name+":addr",str(fields[0])))
       else:
         r.add((name,str(fields[0])))
+    """
+
+    return r
+  
+  def split_events(self, events):
+    r = dict()
+    
+    for event in events:
+      if isinstance(event, Call): #or isinstance(event, Crash):
+        mod = event.module
+        #else:
+        #  mod = self.pname
+        #print mod 
+        if mod is not None:
+          if mod in r:
+            r[mod] = r[mod] + [event]
+          else:
+            r[mod] = [event]
+      
 
     return r
 
-
-  def print_events(self,events):
-
+  def merge_events(self, events):
+     r = dict()
+     r[self.pname] = events
+     return r
+  
+  def print_events(self, events, mode):
+    if mode == "split": 
+      r = self.split_events(events)
+    elif mode == "merge":
+      r = self.merge_events(events)
+    
+    for mod,evs in r.items():
+      #print mod, evs
+      self.__print_events(mod,evs)
+     
+  def __print_events(self,module,events):
+   
     r = list()
 
     for event in events:
@@ -61,7 +95,7 @@ class Printer:
       return
 
     self.tests.add(x)
-    
+    print module+"\t", 
     for x,y in events:
       #x,y = event
       print str(x)+"="+str(y)+" ",

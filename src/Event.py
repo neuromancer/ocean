@@ -1,7 +1,7 @@
 from ptrace.ctypes_tools import bytes2word
 from Spec                import specs
 from Types import Type, GetPtype
-from Analysis import RefinePType
+from Analysis import FindModule, RefinePType
 
 #from distorm import Decode, Decode32Bits
 
@@ -67,8 +67,7 @@ class Call(Event):
 
 
   def GetTypedName(self):
-
-    return (str(self.name)+'@'+str(self.module), [self.retaddr[0],self.retvalue[0]]+list(self.param_ptypes))
+    return (str(self.name), [self.retaddr[0],self.retvalue[0]]+list(self.param_ptypes))
 
 class Signal(Event):
   def __init__(self, name, process, mm): #_sifields = None):
@@ -153,6 +152,7 @@ class Crash(Event):
     #    self.regs[name] = hex(value).replace("L","")
 
     #print "crash @",hex(process.getInstrPointer())
+    self.module = FindModule(process.getInstrPointer(),mm)
     self.eip = RefinePType(Type("Ptr32",4), process.getInstrPointer(), process, mm)
 
 

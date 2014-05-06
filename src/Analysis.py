@@ -22,6 +22,10 @@ from math import ceil
 from Types import Type
 from ptrace.error import PtraceError
 
+def FindModule(value, mm):
+ return mm.findModule(value)
+
+
 def RefinePType(ptype, value, process, mm):
 
   if value is None:

@@ -24,7 +24,7 @@ from Run import Launch
 from MemoryMap import MemoryMaps
 
 class Process(Application):
-    def __init__(self, program, envs, no_stdout = False):
+    def __init__(self, program, envs, hooked_mods = [], no_stdout = True):
 
         Application.__init__(self)  # no effect
 
@@ -35,13 +35,14 @@ class Process(Application):
         self.envs = envs
 
         self.process = None
+        self.hooked_mods = list(hooked_mods)
         self.pid = None
         self.mm = None
         self.timeouts = 0
         self.max_timeouts = 10
 
         # Parse ELF
-        self.elf = ELF(self.program)
+        self.elf = ELF(self.program, plt = False)
         self.modules = dict()
 
         self.last_signal = {}
@@ -51,12 +52,10 @@ class Process(Application):
 
         self.binfo = dict()
 
-        #self.followterms = []
-
     def setBreakpoints(self, elf):
       for func_name in elf.GetFunctions():
         if func_name in specs:
-          #print func_name, hex(elf.FindFuncInPlt(func_name))
+          #print elf.GetModname(), func_name, hex(elf.FindFuncInPlt(func_name))
           addr = elf.FindFuncInPlt(func_name)
           self.binfo[addr] = elf.GetModname(),func_name
           self.breakpoint(addr)
@@ -93,17 +92,20 @@ class Process(Application):
                   #print self.mm
 
                   for (range, mod, atts) in self.mm.items():
-                     if "/" in mod and 'x' in atts and not ("libc-" in mod):
+                     if '/' in mod and 'x' in atts and not ("libc-" in mod):
                   
                         if mod == self.elf.path:
                            base = 0
                         else:
                            base = range[0]
- 
-                        if not (mod in self.modules):
-                          self.modules[mod] = ELF(mod, base)
+                        
+                        if self.hooked_mods == [] or any(map(lambda l: l in mod, self.hooked_mods)): 
+                          if not (mod in self.modules):
+                            self.modules[mod] = ELF(mod, base = base)
+                          #print "hooking", mod, hex(base)
 
-                        self.setBreakpoints(self.modules[mod])
+                          self.setBreakpoints(self.modules[mod])
+
             
                   return []
 

@@ -69,15 +69,19 @@ def entrypoint(path):
 class ELF:
   '''A parsed ELF file'''
 
-  def __init__(self, path, base = 0x0):
+  def __init__(self, path, plt = True, base = 0x0):
     self.path = str(path)
     self.base = base
     self.sections = dict()
 
     self.entrypoint = entrypoint(path)
-    self._load_sections()
-
-    self.plt, self.got = plt_got(self.path, self.base)
+    #self._load_sections()
+    
+    
+    if plt:
+      self.plt, self.got = plt_got(self.path, self.base)
+    else:
+      self.plt, self.got = dict(), dict()
     self.name2addr = self.plt
     self.addr2name = dict()
 

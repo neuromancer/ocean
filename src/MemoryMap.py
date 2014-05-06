@@ -60,6 +60,12 @@ class MemoryMaps:
       self.update()
     return self.checkPtr(ptr, update=False)
 
+  def findModule(self, ptr):
+    for (mrange,zone) in self.mm.items():
+      if ptr >= mrange[0] and ptr < mrange[1]:
+        return str(zone)
+    return None
+
   def __str__(self):
     r = ""
     for (mrange,zone) in self.mm.items():
