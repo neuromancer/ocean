@@ -2,7 +2,7 @@ import sys
 import csv
 from numpy import zeros, savetxt
 
-from src.Event    import Call, Crash, Abort, Signal, specs
+from src.Event    import Call, Crash, Abort, Exit, Signal, specs
 from src.Types    import ptypes, isPtr, isNum, ptr32_ptypes, num32_ptypes, generic_ptypes
 
 
@@ -31,6 +31,9 @@ class Printer:
       (name, fields) = event.GetTypedName()
       r.add((name+":eip",str(fields[0])))
     
+    elif isinstance(event, Exit):
+      (name, fields) = event.GetTypedName()
+      r.add((name,str(())))
     
     elif isinstance(event, Crash):
       (name, fields) = event.GetTypedName()

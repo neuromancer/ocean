@@ -10,7 +10,7 @@ from ptrace.ctypes_tools import (truncateWord,
     formatWordHex, formatAddress, formatAddressRange, word2bytes)
 
 from ptrace.signames import signalName, SIGNAMES
-from signal import SIGTRAP, SIGALRM, SIGABRT, SIGSEGV, SIGCHLD, SIGWINCH, SIGFPE, SIGBUS, SIGTERM, SIGPIPE, signal, alarm
+from signal import SIGTRAP, SIGALRM, SIGABRT, SIGSEGV, SIGILL, SIGCHLD, SIGWINCH, SIGFPE, SIGBUS, SIGTERM, SIGPIPE, signal, alarm
 from errno import ESRCH, EPERM
 from ptrace.cpu_info import CPU_POWERPC
 from ptrace.debugger import ChildError
@@ -149,6 +149,11 @@ class Process(Application):
           self.crashed = True
           self.mm  = MemoryMaps(self.program, self.pid)
           return [Signal("SIGSEGV", self.process, self.mm), Crash(self.process, self.mm)]
+
+        elif signal.signum == SIGILL:
+          self.crashed = True
+          self.mm  = MemoryMaps(self.program, self.pid)
+          return [Signal("SIGILL", self.process, self.mm), Crash(self.process, self.mm)]
 
         elif signal.signum == SIGFPE:
           self.crashed = True
