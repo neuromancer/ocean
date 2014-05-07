@@ -11,6 +11,7 @@ class Printer:
     self.tests = set()
     self.file = open(filename, "a")
     self.pname = pname
+    self.filters = []
     self.writer = csv.writer(self.file, delimiter='\t')
 
   def preprocess(self, event):
@@ -30,7 +31,7 @@ class Printer:
       (name, fields) = event.GetTypedName()
       r.add((name+":eip",str(fields[0])))
     
-    """
+    
     elif isinstance(event, Crash):
       (name, fields) = event.GetTypedName()
       r.add((name+":eip",str(fields[0])))
@@ -44,9 +45,15 @@ class Printer:
         r.add((name+":addr",str(fields[0])))
       else:
         r.add((name,str(fields[0])))
-    """
 
     return r
+
+  def filter_by(self, filter_str):
+    
+    if '=' in filter_str:
+      self.filters.append(tuple(filter_str.split('=')))
+    else:
+      print "Invalid fiter:", filter_str
   
   def split_events(self, events):
     r = dict()
@@ -90,6 +97,9 @@ class Printer:
     
     events = r
 
+    if not (self.filters == [] or any(map(lambda f: f in events,self.filters))):
+      return
+
     x = hash(tuple(events))
     if (x in self.tests):
       return
@@ -98,7 +108,7 @@ class Printer:
     print module+"\t", 
     for x,y in events:
       #x,y = event
-      print str(x)+"="+str(y)+" ",
+      print x+"="+y+" ",
       #assert(not ("abort" in str(x)))  
 
     print "\n",

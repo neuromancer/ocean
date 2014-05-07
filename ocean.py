@@ -29,6 +29,13 @@ from src.Detection  import GetArgs, GetFiles, GetCmd, GetDir
 from src.Mutation   import BruteForceMutator, NullMutator, BruteForceExpander, SurpriseMutator ,InputMutator, RandomInputMutator
 from src.Printer    import Printer
 
+def readmodfile(modfile):
+  hooked_mods = [] 
+  if modfile is not None:
+    hooked_mods =  open(modfile).read().split("\n")
+    hooked_mods = filter(lambda x: x <> '', hooked_mods)
+  return hooked_mods
+
 if __name__ == "__main__":
     # Arguments
     parser = argparse.ArgumentParser(description='xxx')
@@ -40,9 +47,17 @@ if __name__ == "__main__":
                         help="Don't use /dev/null as stdout/stderr, nor close stdout and stderr if /dev/null doesn't exist",
                         action="store_true", default=False)
   
-    parser.add_argument("--modfile",
+    parser.add_argument("--inc-mods",
                         help="",
                         type=str, default=None)
+    
+    parser.add_argument("--exc-mods",
+                        help="",
+                        type=str, default=None) 
+ 
+    parser.add_argument("--filter-by",
+                        help="",
+                        type=str, nargs='+', default=[])
 
     parser.add_argument("--X-program", dest="envs",
                         help="",
@@ -52,9 +67,12 @@ if __name__ == "__main__":
                         help="", default=0)
 
     options = parser.parse_args()
+    
     testcase = options.testcase
     print_mode = options.mode
-    modfile = options.modfile
+    filters = options.filter_by
+    incmodfile = options.inc_mods
+    excmodfile = options.exc_mods
     show_stdout = options.show_stdout
     max_mut = options.max_mut
 
@@ -73,13 +91,11 @@ if __name__ == "__main__":
     files = GetFiles()
 
     # modules to hook
-    hooked_mods = [] 
-    if modfile is not None:
-      hooked_mods =  open(modfile).read().split("\n")
-      hooked_mods = filter(lambda x: x <> '', hooked_mods) 
+    hooked_mods = readmodfile(incmodfile) 
+    #if modfile is not None:
+    #  hooked_mods =  open(modfile).read().split("\n")
+    #  hooked_mods = filter(lambda x: x <> '', hooked_mods) 
     
-    #print hooked_mods
-    #assert(0)
     original_inputs = InputMutator(args, files, NullMutator)
     #mutated_inputs  = InputMutator(args, files, BruteForceMutator)
     #expanded_inputs = InputMutator(args, files, BruteForceExpander)
@@ -87,6 +103,7 @@ if __name__ == "__main__":
 
     app = Process(program, envs, hooked_mods = hooked_mods, no_stdout = not show_stdout )
     prt = Printer("/dev/stdout", program)
+    map(prt.filter_by, filters)
 
     # unchanged input
     delta, original_input = original_inputs.next()
