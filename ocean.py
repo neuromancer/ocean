@@ -51,7 +51,7 @@ if __name__ == "__main__":
                         help="",
                         type=str, default=None)
     
-    parser.add_argument("--exc-mods",
+    parser.add_argument("--ign-mods",
                         help="",
                         type=str, default=None) 
  
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     print_mode = options.mode
     filters = options.filter_by
     incmodfile = options.inc_mods
-    excmodfile = options.exc_mods
+    ignmodfile = options.ign_mods
     show_stdout = options.show_stdout
     max_mut = options.max_mut
 
@@ -90,8 +90,10 @@ if __name__ == "__main__":
     args = GetArgs()
     files = GetFiles()
 
-    # modules to hook
-    hooked_mods = readmodfile(incmodfile) 
+    # modules to include or ignore
+    included_mods = readmodfile(incmodfile)
+    ignored_mods = readmodfile(ignmodfile) 
+     
     #if modfile is not None:
     #  hooked_mods =  open(modfile).read().split("\n")
     #  hooked_mods = filter(lambda x: x <> '', hooked_mods) 
@@ -101,7 +103,7 @@ if __name__ == "__main__":
     #expanded_inputs = InputMutator(args, files, BruteForceExpander)
     crazy_inputs    = RandomInputMutator(args, files, SurpriseMutator)
 
-    app = Process(program, envs, hooked_mods = hooked_mods, no_stdout = not show_stdout )
+    app = Process(program, envs, included_mods, ignored_mods, no_stdout = not show_stdout )
     prt = Printer("/dev/stdout", program)
     map(prt.filter_by, filters)
 

@@ -24,7 +24,7 @@ from Run import Launch
 from MemoryMap import MemoryMaps
 
 class Process(Application):
-    def __init__(self, program, envs, hooked_mods = [], no_stdout = True):
+    def __init__(self, program, envs, included_mods = [], ignored_mods = [], no_stdout = True):
 
         Application.__init__(self)  # no effect
 
@@ -35,7 +35,9 @@ class Process(Application):
         self.envs = envs
 
         self.process = None
-        self.hooked_mods = list(hooked_mods)
+        self.included_mods = list(included_mods)
+        self.ignored_mods = list(ignored_mods)
+
         self.pid = None
         self.mm = None
         self.timeouts = 0
@@ -99,12 +101,14 @@ class Process(Application):
                         else:
                            base = range[0]
                         
-                        if self.hooked_mods == [] or any(map(lambda l: l in mod, self.hooked_mods)): 
-                          if not (mod in self.modules):
-                            self.modules[mod] = ELF(mod, base = base)
-                          #print "hooking", mod, hex(base)
+                        if self.included_mods == [] or any(map(lambda l: l in mod, self.included_mods)):
+                          if self.ignored_mods == [] or not (any(map(lambda l: l in mod, self.ignored_mods))):
+                            
+                            if not (mod in self.modules):
+                              self.modules[mod] = ELF(mod, base = base)
+                            #print "hooking", mod, hex(base)
 
-                          self.setBreakpoints(self.modules[mod])
+                            self.setBreakpoints(self.modules[mod])
 
             
                   return []
