@@ -56,31 +56,36 @@ class SurpriseMutator(Mutator):
     assert(self.input_len > 0)
 
     input = self.input.copy()
-
+    delta = str(self.input.GetType())+" "
+ 
     m = random.sample(["s","e","se"],1)[0]
+    #delta = delta 
 
     if "s" in m:
       # single byte mutation
       i = random.randrange(self.input_len)
       m = self.array[random.randrange(self.array_len)]
       input.data = input.data[:i] + m + input.data[i+1:]
+      delta = delta + "mod" + " " + "pos="+str(i) + " " + "old=" + str(ord(self.input.data[i]))+ " " + "new=" + str(ord(m))
 
     if "e" in m:
       # expansion mutation
       i = random.randrange(self.input_len)
       j = random.randrange(self.max_expansion)
       m = self.array[random.randrange(self.array_len)]
+      delta = delta + "exp" + " " + "pos=" + str(i) + " " + "size=" + str(j) + " " + "old=" + str(ord(self.input.data[i]))+ " " + "new="+ str(ord(m))
 
       #print self.array[rand]
       input.data = input.data[:i] + m*j + input.data[i+1:]
-
+    
+    self.delta = delta
     return input
 
   def GetInput(self):
     return self.input.copy()
 
   def GetDelta(self):
-    return None
+    return self.delta
 
 """
 class RandomMutator(Mutator):

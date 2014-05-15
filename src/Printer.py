@@ -81,7 +81,7 @@ class Printer:
      r[self.pname] = events
      return r
   
-  def print_events(self, events, mode):
+  def print_events(self, delta, events, mode):
     if mode == "split": 
       r = self.split_events(events)
     elif mode == "merge":
@@ -89,9 +89,9 @@ class Printer:
     
     for mod,evs in r.items():
       #print mod, evs
-      self.__print_events(mod,evs)
+      self.__print_events(mod,delta,evs)
      
-  def __print_events(self,module,events):
+  def __print_events(self,module,delta,events):
    
     r = list()
 
@@ -108,7 +108,7 @@ class Printer:
       return
 
     self.tests.add(x)
-    print module+"\t", 
+    print module+"\t"+delta+"\t", 
     for x,y in events:
       #x,y = event
       print x+"="+y+" ",

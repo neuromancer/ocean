@@ -115,9 +115,9 @@ if __name__ == "__main__":
         print "Execution of",program,"failed!"
         exit(-1)
 
-    prt.print_events(original_events, print_mode)
+    prt.print_events("o", original_events, print_mode)
 
-    for (i, (_, mutated)) in enumerate(crazy_inputs):
+    for (i, (d, mutated)) in enumerate(crazy_inputs):
       if app.timeouted():
         sys.exit(-1)
 
@@ -125,7 +125,7 @@ if __name__ == "__main__":
         break
 
       events = app.getData(mutated)
-      prt.print_events(events, print_mode)
+      prt.print_events(d, events, print_mode)
 
 
       # x = hash_events(events)
