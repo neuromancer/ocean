@@ -104,7 +104,11 @@ class SurpriseMutator(Mutator):
       i = random.randrange(self.input_len)
       m = self.array[random.randrange(self.array_len)]
       input.data = input.data[:i] + m + input.data[i+1:]
-      delta = OneByteDeltaMutation(input, dict(pos = i, old = ord(self.input.data[i]), new=ord(m))) 
+      
+
+      #print i, self.input_len, i/float(self.input_len)
+      rpos = int(i/(float(self.input_len))*100.0) 
+      delta = OneByteDeltaMutation(input, dict(pos = rpos, old = ord(self.input.data[i]), new=ord(m))) 
       #delta = delta + "mod" + " " + "pos="+str(i) + " " + "old=" + str(ord(self.input.data[i]))+ " " + "new=" + str(ord(m))
 
     if "e" in m:
@@ -115,8 +119,13 @@ class SurpriseMutator(Mutator):
       #delta = delta + "exp" + " " + "pos=" + str(i) + " " + "size=" + str(j) + " " + "old=" + str(ord(self.input.data[i]))+ " " + "new="+ str(ord(m))
 
       #print self.array[rand]
-      input.data = input.data[:i] + m*j + input.data[i+1:] 
-      delta = ByteExtensionDeltaMutation(input,  dict(pos = i, size = j, old = ord(self.input.data[i]), new = ord(m) )) 
+      input.data = input.data[:i] + m*j + input.data[i+1:]
+
+      
+      rpos = int(i/(float(self.input_len))*100.0) 
+      rsize = j/100*100
+      delta = ByteExtensionDeltaMutation(input,  dict(pos = rpos, size = rsize, old = ord(self.input.data[i]), new = ord(m) )) 
+
     
     self.delta = delta
     return input

@@ -210,12 +210,14 @@ class DataPrinter:
     
     self.original_events = r
     self.original_class = self.find_class(self.original_events)
+    x = hash(tuple(events))
+    self.tests.add(x)
 
   def find_class(self,events):
 
-    for event in events:
-      if event in self.classes:
-        return self.classes[event]
+    for (x,_) in events:
+      if x in self.classes:
+        return self.classes[x]
 
     return self.classes['*']
  
