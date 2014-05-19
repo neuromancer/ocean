@@ -23,11 +23,12 @@ import os
 import argparse
 import csv
 import sys
+import random
 
 from src.Process    import Process
 from src.Detection  import GetArgs, GetFiles, GetCmd, GetDir
 from src.Mutation   import BruteForceMutator, NullMutator, BruteForceExpander, SurpriseMutator ,InputMutator, RandomInputMutator
-from src.Printer    import Printer
+from src.Printer    import Printer, DataPrinter
 
 def readmodfile(modfile):
   hooked_mods = [] 
@@ -37,6 +38,9 @@ def readmodfile(modfile):
   return hooked_mods
 
 if __name__ == "__main__":
+    # Random seed initialziation
+    random.seed()
+
     # Arguments
     parser = argparse.ArgumentParser(description='xxx')
     parser.add_argument("testcase", help="Testcase to use", type=str, default=None)
@@ -104,8 +108,13 @@ if __name__ == "__main__":
     crazy_inputs    = RandomInputMutator(args, files, SurpriseMutator)
 
     app = Process(program, envs, included_mods, ignored_mods, no_stdout = not show_stdout )
-    prt = Printer("/dev/stdout", program)
-    map(prt.filter_by, filters)
+    
+    classes = dict()
+    classes['crashed:eip'] = 'B'
+    classes['*'] = 'R'
+
+    prt = DataPrinter("/dev/stdout", program, classes)
+    #map(prt.filter_by, filters)
 
     # unchanged input
     delta, original_input = original_inputs.next()
@@ -115,7 +124,9 @@ if __name__ == "__main__":
         print "Execution of",program,"failed!"
         exit(-1)
 
-    prt.print_events("o", original_events, print_mode)
+    prt.set_original_events(original_events)
+    #prt.print_events("o", original_events, print_mode)
+    #assert(0)
 
     for (i, (d, mutated)) in enumerate(crazy_inputs):
       if app.timeouted():
@@ -125,31 +136,4 @@ if __name__ == "__main__":
         break
 
       events = app.getData(mutated)
-      prt.print_events(d, events, print_mode)
-
-
-      # x = hash_events(events)
-      #
-      # if not (x in tests):
-      #
-      #   tests.add(x)
-      #
-      #   g = CallGraph(events)
-      #   y = hash(str(g.graph.to_string()))
-      #   #print y
-      #
-      #   if (not (y in tests)):
-      #     name = "-".join(map(str, [delta["iname"], delta["mtype"],delta["aoffset"], delta["byte"]]))
-      #     #print events[-1]
-      #     g.WriteGraph(outdir+"/"+name+".dot")
-      #     tests.add(y)
-
-
-    #for delta, mutated in mutated_inputs:
-
-    #  if app.timeouted():
-    #    sys.exit(-1)
-
-    #  events = app.getData(mutated)
-    #  vec.vectorize(events)
-
+      prt.print_events(d, events)

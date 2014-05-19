@@ -18,9 +18,47 @@ Copyright 2014 by neuromancer
 """
 
 import random
+import copy
+
 import Input
 
-random.seed(0)
+class DeltaMutation(object):
+  def __init__(self, inp, atts):
+    self.inp_type = str(inp.GetType())
+    #self.mut_type = str(typ)
+    self.atts = copy.copy(atts) 
+
+  def __str__(self):
+    
+    r = ["input="+self.inp_type, "type="+self.mut_type]
+    r = r + map(lambda (a,b): a+"="+str(b),self.atts.items())  
+    return " ".join(r)
+
+class OneByteDeltaMutation(DeltaMutation):
+
+  def __init__(self, inp, atts):
+    #DeltaMutation.__init__(inp, atts)
+    super(self.__class__, self).__init__(inp, atts)
+    self.mut_type = "mod"
+
+  def inv(self):
+    t = self.atts["new"]
+    self.atts["new"] = self.atts["old"]
+    self.atts["old"] = t
+
+
+class ByteExtensionDeltaMutation(DeltaMutation):
+
+  def __init__(self, inp, atts):
+    super(self.__class__, self).__init__(inp, atts)
+    self.mut_type = "ext"
+
+  def inv(self):
+    self.mut_type = "con"
+    t = self.atts["new"]
+    self.atts["new"] = self.atts["old"]
+    self.atts["old"] = t
+
 
 class Mutator:
   def __init__(self, input):
@@ -58,7 +96,7 @@ class SurpriseMutator(Mutator):
     input = self.input.copy()
     delta = str(self.input.GetType())+" "
  
-    m = random.sample(["s","e","se"],1)[0]
+    m = random.sample(["s","e"],1)[0]
     #delta = delta 
 
     if "s" in m:
@@ -66,17 +104,19 @@ class SurpriseMutator(Mutator):
       i = random.randrange(self.input_len)
       m = self.array[random.randrange(self.array_len)]
       input.data = input.data[:i] + m + input.data[i+1:]
-      delta = delta + "mod" + " " + "pos="+str(i) + " " + "old=" + str(ord(self.input.data[i]))+ " " + "new=" + str(ord(m))
+      delta = OneByteDeltaMutation(input, dict(pos = i, old = ord(self.input.data[i]), new=ord(m))) 
+      #delta = delta + "mod" + " " + "pos="+str(i) + " " + "old=" + str(ord(self.input.data[i]))+ " " + "new=" + str(ord(m))
 
     if "e" in m:
       # expansion mutation
       i = random.randrange(self.input_len)
       j = random.randrange(self.max_expansion)
       m = self.array[random.randrange(self.array_len)]
-      delta = delta + "exp" + " " + "pos=" + str(i) + " " + "size=" + str(j) + " " + "old=" + str(ord(self.input.data[i]))+ " " + "new="+ str(ord(m))
+      #delta = delta + "exp" + " " + "pos=" + str(i) + " " + "size=" + str(j) + " " + "old=" + str(ord(self.input.data[i]))+ " " + "new="+ str(ord(m))
 
       #print self.array[rand]
-      input.data = input.data[:i] + m*j + input.data[i+1:]
+      input.data = input.data[:i] + m*j + input.data[i+1:] 
+      delta = ByteExtensionDeltaMutation(input,  dict(pos = i, size = j, old = ord(self.input.data[i]), new = ord(m) )) 
     
     self.delta = delta
     return input
