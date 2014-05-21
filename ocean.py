@@ -44,7 +44,7 @@ if __name__ == "__main__":
     # Arguments
     parser = argparse.ArgumentParser(description='xxx')
     parser.add_argument("testcase", help="Testcase to use", type=str, default=None)
-    parser.add_argument("mode", help="Print mode to use", type=str, default="split")
+    #parser.add_argument("mode", help="Print mode to use", type=str, default="split")
     #
     #parser.add_argument("outdir", help="Output directory to use", type=str, default=".")
     parser.add_argument("--show-stdout",
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     options = parser.parse_args()
     
     testcase = options.testcase
-    print_mode = options.mode
+    #print_mode = options.mode
     filters = options.filter_by
     incmodfile = options.inc_mods
     ignmodfile = options.ign_mods
@@ -111,6 +111,7 @@ if __name__ == "__main__":
     
     classes = dict()
     classes['crashed:eip'] = 'B'
+    #classes['abort:eip'] = 'B'
     classes['*'] = 'R'
 
     prt = DataPrinter("/dev/stdout", program, classes)
