@@ -111,7 +111,7 @@ if __name__ == "__main__":
     
     classes = dict()
     classes['crashed:eip'] = 'B'
-    #classes['abort:eip'] = 'B'
+    classes['abort:eip'] = 'B'
     classes['*'] = 'R'
 
     prt = DataPrinter("/dev/stdout", program, classes)
