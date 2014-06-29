@@ -119,13 +119,27 @@ class Exit(Event):
 class Abort(Event):
   def __init__(self, process, mm):
     self.name = "Abort"
+    self.smashed_stack = False
+
+    self.bt =  process.getBacktrace()
+    for frame in self.bt:
+      r_type = RefinePType(Type("Ptr32",4), frame.ip, process, mm)
+      #print r_type[0], hex(r_type[1])
+      if r_type[1] == 0xb7f3e980: #__fortify_fail address
+        self.smashed_stack = True
+        break
+ 
     self.eip = RefinePType(Type("Ptr32",4), process.getInstrPointer(), process, mm)
 
   def __str__(self):
     return str(self.name)
 
   def GetTypedName(self):
-    return ("abort", [self.eip[0]])#
+    
+    if self.smashed_stack:
+      return ("vulnerable_abort", [self.eip[0]])
+    else:
+      return ("abort", [self.eip[0]])#
 
 class Timeout(Event):
   def __init__(self, secs):
@@ -152,7 +166,20 @@ class Crash(Event):
     #    self.regs[name] = hex(value).replace("L","")
 
     #print "crash @",hex(process.getInstrPointer())
+    self.smashed_stack = False
+
     self.module = FindModule(process.getInstrPointer(),mm)
+    self.bt =  process.getBacktrace()
+    for frame in self.bt:
+      r_type = RefinePType(Type("Ptr32",4), frame.ip, process, mm)
+      #print hex(r_type[1])
+      if str(r_type[0]) == "DPtr32":
+        #print hex(r_type[1])
+        self.smashed_stack = True
+        #assert(0)
+        break
+    #print(self.bt)
+    #assert(False)
     self.eip = RefinePType(Type("Ptr32",4), process.getInstrPointer(), process, mm)
 
 
@@ -169,7 +196,10 @@ class Crash(Event):
     #  return "Crash@"+hex(self.eip)+" -> "+hex(self.faulty_addr).replace("L", "")
 
   def GetTypedName(self):
-    return ("crashed", [self.eip[0]])#, self.faulty_addr[0]])
+    if self.smashed_stack:
+      return ("vulnerable_crash", [self.eip[0]])
+    else: 
+      return ("crashed", [self.eip[0]])#, self.faulty_addr[0]])
 
 def hash_events(events):
   return hash(tuple(map(str, events)))

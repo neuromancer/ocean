@@ -100,6 +100,7 @@ class Printer:
       r = r + list(self.preprocess(event))
     
     self.original_events = r
+    self.original_printed = False
  
 
   def print_data(self, module, delta, events):
@@ -211,6 +212,7 @@ class DataPrinter:
     
     self.original_events = r
     self.original_class = self.find_class(self.original_events)
+    self.original_printed = False
     
     x = hash(tuple(self.original_events))
     #print "Adding", tuple(events), x
@@ -235,19 +237,38 @@ class DataPrinter:
     events = r
 
     x = hash(tuple(events))
+
+    if (not self.original_printed):
+      print self.pname+"\t"+"N"+"\t", 
+      for x,y in self.original_events:
+        print x+"="+y,
+      print ""
+      self.original_printed = True
+ 
     
     if (x in self.tests):
       return
- 
+
     self.tests.add(x)
+
+    #for a,b in zip(self.original_events, events):
+    #  print repr(a), repr(b), a == b,
+    #print ""
+    #assert(events <> self.original_events)
     
+    print self.pname+"\t"+str(delta)+"\t", 
+    for x,y in events:
+      print x+"="+y,
+    print ""
+   
+    """
     if len(self.original_events) >= self.min_size:
      
       # f(m, original_events) = new_class
 
       print self.pname+"\t"+str(delta)+"\t", 
       for x,y in self.original_events:
-        print x+"="+y+" ",
+        print x+"="+y,
 
       print "\t"+str(self.find_class(events))+"\n",
   
@@ -258,8 +279,9 @@ class DataPrinter:
 
       print self.pname+"\t"+str(delta)+"\t", 
       for x,y in events:
-        print x+"="+y+" ",
+        print x+"="+y,
 
       print "\t"+str(self.original_class)+"\n",
+    """
 
     return
