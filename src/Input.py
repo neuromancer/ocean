@@ -37,6 +37,9 @@ class Arg(Input):
 
     self.size = len(self.data)
 
+  def __str__(self):
+    return "Arg("+str(self.i)+") = "+repr(self.data)
+
   def GetData(self):
     return str(self.data)
 
@@ -106,6 +109,9 @@ class File(Input):
     self.filename = str(filename)
     self.data = str(data)
     self.size = len(data)
+ 
+  def __str__(self):
+    return "file("+str(self.filename)+") = "+repr(self.data)
 
   def GetData(self):
     return str(self.data)

@@ -27,7 +27,7 @@ import random
 
 from src.Process    import Process
 from src.Detection  import GetArgs, GetFiles, GetCmd, GetDir
-from src.Mutation   import BruteForceMutator, NullMutator, BruteForceExpander, SurpriseMutator ,InputMutator, RandomInputMutator
+from src.Mutation   import NullMutator, RandomByteMutator, RandomExpanderMutator, RandomInputMutator
 from src.Printer    import Printer, DataPrinter
 
 def readmodfile(modfile):
@@ -37,10 +37,18 @@ def readmodfile(modfile):
     hooked_mods = filter(lambda x: x <> '', hooked_mods)
   return hooked_mods
 
+def prepare_inputs(inputs):
+  r = []
+  for input in inputs:
+    arg = input.PrepareData()
+    if not (arg is None):
+      r.append(arg)
+
+  return r
+
 if __name__ == "__main__":
     # Random seed initialziation
     random.seed()
-
     # Arguments
     parser = argparse.ArgumentParser(description='xxx')
     parser.add_argument("testcase", help="Testcase to use", type=str, default=None)
@@ -70,6 +78,12 @@ if __name__ == "__main__":
     parser.add_argument("-n", dest="max_mut", type=int,
                         help="", default=0)
 
+    parser.add_argument("-d", dest="depth", type=int,
+                        help="", default=1)
+   
+    parser.add_argument("-w", dest="width", type=int,
+                        help="", default=0)
+
     options = parser.parse_args()
     
     testcase = options.testcase
@@ -79,6 +93,8 @@ if __name__ == "__main__":
     ignmodfile = options.ign_mods
     show_stdout = options.show_stdout
     max_mut = options.max_mut
+    depth = options.depth
+    width = options.width
 
     csvfile = sys.stdout
 
@@ -102,10 +118,9 @@ if __name__ == "__main__":
     #  hooked_mods =  open(modfile).read().split("\n")
     #  hooked_mods = filter(lambda x: x <> '', hooked_mods) 
     
-    original_inputs = InputMutator(args, files, NullMutator)
-    #mutated_inputs  = InputMutator(args, files, BruteForceMutator)
-    #expanded_inputs = InputMutator(args, files, BruteForceExpander)
-    crazy_inputs    = RandomInputMutator(args, files, SurpriseMutator)
+    original_inputs = RandomInputMutator(args + files, NullMutator)
+    expanded_input_generator = RandomInputMutator(args + files, RandomExpanderMutator)
+    mutated_input_generator = RandomInputMutator(args + files, RandomByteMutator)
 
     app = Process(program, envs, included_mods, ignored_mods, no_stdout = not show_stdout )
     
@@ -118,8 +133,8 @@ if __name__ == "__main__":
     #map(prt.filter_by, filters)
 
     # unchanged input
-    delta, original_input = original_inputs.next()
-    original_events = app.getData(original_input)
+    _, original_input = original_inputs.next()
+    original_events = app.getData(prepare_inputs(original_input))
 
     if original_events is None:
         print "Execution of",program,"failed!"
@@ -127,14 +142,43 @@ if __name__ == "__main__":
 
     prt.set_original_events(original_events)
     #prt.print_events("o", original_events, print_mode)
-    #assert(0)
+    #assert(0) 
 
-    for (i, (d, mutated)) in enumerate(crazy_inputs):
-      if app.timeouted():
-        sys.exit(-1)
+    for (i, (d, mutated)) in enumerate(expanded_input_generator):
+      #if app.timeouted():
+      #  sys.exit(-1)
 
       if i >= max_mut:
         break
 
-      events = app.getData(mutated)
+      events = app.getData(prepare_inputs(mutated))
       prt.print_events(d, events)
+      
+    mutated_inputs = []
+
+
+    if depth > 0:
+      for _ in range(width):
+        _, mutated = mutated_input_generator.next()
+
+        events = app.getData(prepare_inputs(mutated))
+        prt.print_events(d, events)
+        #print(map(str,mutated))#, map(type, mutated))
+        mutated_inputs.append(mutated)
+
+    #assert(0)
+    #print(mutated_inputs)
+
+    for _ in range(depth):
+      for mutated_input in mutated_inputs:
+        expanded_input_generator = RandomInputMutator(mutated_input, RandomExpanderMutator)
+    
+        for (i, (d, mutated)) in enumerate(expanded_input_generator):
+          #if app.timeouted():
+          #  sys.exit(-1)
+
+          if i >= max_mut:
+            break
+
+          events = app.getData(prepare_inputs(mutated))
+          prt.print_events(d, events)

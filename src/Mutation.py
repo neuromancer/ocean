@@ -82,6 +82,70 @@ class Mutator:
   def GetDelta(self):
     assert(0)
 
+
+class RandomExpanderMutator(Mutator):
+
+  max_expansion = 10000
+
+  def __iter__(self):
+    return self
+
+  def next(self):
+
+    assert(self.input_len > 0)
+
+    input = self.input.copy()
+    delta = str(self.input.GetType())+" "
+    
+    # expansion mutation
+    i = random.randrange(self.input_len)
+    j = random.randrange(self.max_expansion)
+    m = self.array[random.randrange(self.array_len)]
+
+    #print self.array[rand]
+    input.data = input.data[:i] + m*j + input.data[i+1:]
+
+      
+    rpos = int(i/(float(self.input_len))*100.0) 
+    rsize = j/100*100
+    self.delta = ByteExtensionDeltaMutation(input,  dict(pos = rpos, size = rsize, old = ord(self.input.data[i]), new = ord(m) )) 
+ 
+    return input
+
+  def GetInput(self):
+    return self.input.copy()
+
+  def GetDelta(self):
+    return self.delta
+
+class RandomByteMutator(Mutator):
+
+  def __iter__(self):
+    return self
+
+  def next(self):
+
+    assert(self.input_len > 0)
+
+    input = self.input.copy()
+    delta = str(self.input.GetType())+" "
+ 
+    # single byte mutation
+    i = random.randrange(self.input_len)
+    m = self.array[random.randrange(self.array_len)]
+    input.data = input.data[:i] + m + input.data[i+1:]
+      
+    rpos = int(i/(float(self.input_len))*100.0) 
+    self.delta = OneByteDeltaMutation(input, dict(pos = rpos, old = ord(self.input.data[i]), new=ord(m))) 
+    return input
+
+  def GetInput(self):
+    return self.input.copy()
+
+  def GetDelta(self):
+    return self.delta
+
+"""
 class SurpriseMutator(Mutator):
 
   max_expansion = 10000
@@ -135,56 +199,7 @@ class SurpriseMutator(Mutator):
 
   def GetDelta(self):
     return self.delta
-
 """
-class RandomMutator(Mutator):
-
-
-  def Mutate(self):
-    i = self.i
-    rand = random.randint(0,self.size-1)
-    input = self.input.copy()
-    #print self.array[rand]
-    input.data = input.data[:i] + self.array[rand] + input.data[i+1:]
-    print input.data
-    self.i = i + 1
-    return input
-
-  def GetInput(self):
-    return self.input.copy()
-
-
-class CompleteMutator(Mutator):
-
-  def __init__(self, input):
-    Mutator.__init__(self, input)
-
-    self.array = filter(lambda b: b <> "'", self.array)
-    self.size -= 1
-
-    #input = self.input.copy()
-    ilen = input.GetSize()
-    self.input.data = ""
-    for i in range(ilen):
-      rand = random.randint(0,self.size-1)
-      self.input.data += self.array[rand]
-
-    #self.input = input
-
-  def Mutate(self):
-    i = self.i
-    rand = random.randint(0,self.size-1)
-    input = self.input.copy()
-    #print self.array[rand]
-    input.data = input.data[:i] + self.array[rand] + input.data[i+1:]
-    #print input.data
-    self.i = (i + 1) % len(input.data)
-    return input
-
-  def GetInput(self):
-    return self.input.copy()
-"""
-
 
 class NullMutator(Mutator):
 
@@ -205,7 +220,7 @@ class NullMutator(Mutator):
     return None
 
 
-class BruteForceMutator(Mutator):
+"""class BruteForceMutator(Mutator):
 
   array_i = 0
 
@@ -296,6 +311,7 @@ class BruteForceExpander(Mutator):
 
     return delta
 
+
 class InputMutator:
   def __init__(self, args, files, mutator):
     assert(args <> [] or files <> [])
@@ -366,58 +382,38 @@ class InputMutator:
 
     #return " ".join(map(f,self.arg_mutators)) + " " + "".join(map(f,self.file_mutators))
     #+ " > /dev/null 2> /dev/null\""
-
+"""
 
 class RandomInputMutator:
-  def __init__(self, args, files, mutator):
-    assert(args <> [] or files <> [])
+  def __init__(self, inputs, mutator):
+    assert(inputs <> [])
     self.i = 0
-    self.arg_mutators  = []
-    self.file_mutators = []
-    #self.inputs = list(inputs)
-
-    for input in args:
-      self.arg_mutators.append(mutator(input))
-    for input in files:
-      self.file_mutators.append(mutator(input))
-
-    self.inputs = self.arg_mutators + self.file_mutators
+    self.inputs = map(mutator, inputs)
     self.inputs_len = len(self.inputs)
-  #def __mutate__(self, j,
-
+  
   def __iter__(self):
     return self
 
   def next(self, mutate = True):
     r = []
     delta = None
-    #for i in self.inputs:
-    #  print str(i.input.GetName()),
-    #print ""
     symb_inputs = filter(lambda (_,x): x.input.isSymbolic(), enumerate(self.inputs))
     symb_inputs_len = len(symb_inputs)
-    #print symb_inputs
-
-    #for i in self.inputs:
-    #  print str(i.input.GetName()),
-    #print ""
-
+    
     self.i = symb_inputs[random.randrange(symb_inputs_len)][0]
-    #print self.i
-    #assert(0)
 
-    for j, m in enumerate(self.arg_mutators + self.file_mutators):
+    for j, m in enumerate(self.inputs):
       if self.i == j:
-        input = m.next()
-        data = input.PrepareData()
+        r.append(m.next())
+        #data = input.PrepareData()
         delta = m.GetDelta()
 
       else:
-        input = m.GetInput()
-        data = input.PrepareData()
+        r.append(m.GetInput()) 
+        #data = input.PrepareData()
 
-      if data:
-        r.append(data)
+      #if data:
+      #  r.append(data)
 
     return delta, r
 
