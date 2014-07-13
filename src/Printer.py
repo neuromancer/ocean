@@ -3,10 +3,11 @@ import csv
 import copy
 from numpy import zeros, savetxt
 
+#from src.Mutation import NullDeltaMutation 
 from src.Event    import Call, Crash, Abort, Exit, Signal, specs
 from src.Types    import ptypes, isPtr, isNum, ptr32_ptypes, num32_ptypes, generic_ptypes
 
-
+"""
 class Printer:
   def __init__(self, filename, pname):
     self.tests = set()
@@ -156,15 +157,15 @@ class Printer:
 
     print "\n",
     return
-
+"""
 
 class DataPrinter:
-  def __init__(self, filename,pname,classes,min_size=10):
+  def __init__(self, filename,pname,min_size=10):
     self.tests = set()
     self.file = open(filename, "a")
     self.pname = pname
     self.min_size = min_size
-    self.classes = copy.copy(classes)
+    #self.classes = copy.copy(classes)
     self.writer = csv.writer(self.file, delimiter='\t')
 
   def preprocess(self, event):
@@ -203,7 +204,7 @@ class DataPrinter:
         r.append((name,str(fields[0])))
 
     return r
-
+  """
   def set_original_events(self, events):
     r = list()
 
@@ -225,7 +226,7 @@ class DataPrinter:
         return self.classes[x]
 
     return self.classes['*']
- 
+  """
 
   def print_events(self, delta, events):
      
@@ -238,13 +239,15 @@ class DataPrinter:
 
     x = hash(tuple(events))
 
+    """
     if (not self.original_printed):
-      print self.pname+"\t"+"N"+"\t", 
+      null_delta = NullDeltaMutation()
+      print self.pname+"\t"+str(null_delta)+"\t",  
       for x,y in self.original_events:
         print x+"="+y,
       print ""
       self.original_printed = True
- 
+    """
     
     if (x in self.tests):
       return

@@ -19,6 +19,12 @@ along with SEA. If not, see <http://www.gnu.org/licenses/>.
 Copyright 2014 by neuromancer
 """
 
+""" 
+Dedicated to the intelligence and beauty of a woman that
+inspired this code despite of the distance..
+"""
+
+
 import os
 import argparse
 import csv
@@ -28,7 +34,7 @@ import random
 from src.Process    import Process
 from src.Detection  import GetArgs, GetFiles, GetCmd, GetDir
 from src.Mutation   import NullMutator, RandomByteMutator, RandomExpanderMutator, RandomInputMutator
-from src.Printer    import Printer, DataPrinter
+from src.Printer    import DataPrinter
 
 def readmodfile(modfile):
   hooked_mods = [] 
@@ -124,25 +130,18 @@ if __name__ == "__main__":
 
     app = Process(program, envs, included_mods, ignored_mods, no_stdout = not show_stdout )
     
-    classes = dict()
-    classes['crashed:eip'] = 'B'
-    classes['abort:eip'] = 'B'
-    classes['*'] = 'R'
-
-    prt = DataPrinter("/dev/stdout", program, classes)
-    #map(prt.filter_by, filters)
+    prt = DataPrinter("/dev/stdout", program)
 
     # unchanged input
-    _, original_input = original_inputs.next()
+    null_mutt, original_input = original_inputs.next()
     original_events = app.getData(prepare_inputs(original_input))
 
     if original_events is None:
         print "Execution of",program,"failed!"
         exit(-1)
 
-    prt.set_original_events(original_events)
-    #prt.print_events("o", original_events, print_mode)
-    #assert(0) 
+    #prt.set_original_events(original_events)
+    prt.print_events(null_mutt, original_events)
 
     for (i, (d, mutated)) in enumerate(expanded_input_generator):
       #if app.timeouted():

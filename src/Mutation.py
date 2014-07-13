@@ -34,6 +34,23 @@ class DeltaMutation(object):
     r = r + map(lambda (a,b): a+"="+str(b),self.atts.items())  
     return " ".join(r)
 
+
+class NullDeltaMutation(DeltaMutation):
+
+  def __init__(self):
+    #pass
+    #DeltaMutation.__init__(inp, atts)
+    #super(self.__class__, self).__init__(inp, atts)
+    self.mut_type = "null"
+
+  def __str__(self):   
+    r = ["type="+self.mut_type]
+    return " ".join(r)
+
+  def inv(self):
+    pass
+
+
 class OneByteDeltaMutation(DeltaMutation):
 
   def __init__(self, inp, atts):
@@ -217,7 +234,7 @@ class NullMutator(Mutator):
   #def GetData(self):
 
   def GetDelta(self):
-    return None
+    return NullDeltaMutation()
 
 
 """class BruteForceMutator(Mutator):
