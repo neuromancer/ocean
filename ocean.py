@@ -53,6 +53,12 @@ def prepare_inputs(inputs):
   return r
 
 if __name__ == "__main__":
+
+    if open("/proc/sys/kernel/randomize_va_space").read().strip() <> "0":
+        print "Address space layout randomization (ASLR) is enabled, disable it before continue"
+        print "Hint: # echo 0 > /proc/sys/kernel/randomize_va_space"
+        sys.exit(-1)
+
     # Random seed initialziation
     random.seed()
     # Arguments
