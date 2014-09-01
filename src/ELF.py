@@ -1,4 +1,6 @@
 import re
+import csv
+import os
 import subprocess
 
 _READELF = '/usr/bin/readelf'
@@ -35,9 +37,59 @@ check(_OBJDUMP)
 #                              }
 #     return symbols
 
+realpath = os.path.dirname(os.path.realpath(__file__))
+datadir = "../cache/"
+
+def _save_cached_data(path, plt, got, base):
+  filename = realpath+"/"+datadir+"/"+str(path.replace("/","_"))
+  print "save",filename
+  csvfile = open(filename+".plt", 'wb')
+  writer = csv.writer(csvfile, delimiter='\t')
+
+  for (name,addr) in plt.items():
+    if addr is not None:
+      writer.writerow((name,addr-base))
+
+  csvfile = open(filename+".got", 'wb')
+  writer = csv.writer(csvfile, delimiter='\t')
+
+  for (name,addr) in got.items():
+    if addr is not None:
+      writer.writerow((name,addr))
+  
+def _load_cached_data(path, plt, got, base):
+  
+  filename = realpath+"/"+datadir+"/"+str(path.replace("/","_"))
+  print "load", filename
+  try: 
+      csvfile = open(filename+".plt", 'rb')
+  except IOError:
+      return False
+  reader = csv.reader(csvfile, delimiter='\t')
+  
+  for (name,addr) in reader:
+      plt[name] = int(addr)+base
+
+
+  try:
+      csvfile = open(filename+".got", 'rb')
+  except IOError:
+      return False
+ 
+  reader = csv.reader(csvfile, delimiter='\t')
+
+  for (name,addr) in reader:
+      got[name] = int(addr)
+
+  return True
+
 def plt_got(path, base):
   plt, got = dict(), dict()
 
+  if _load_cached_data(path, plt, got, base):
+    return plt, got
+
+  #assert(0)
   cmd = [_OBJDUMP, '-d', path]
   out = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
   got32 = '[^j]*jmp\s+\*0x(\S+)'
@@ -55,6 +107,7 @@ def plt_got(path, base):
      plt[name] = base + addr
      got[name] = gotaddr
 
+  _save_cached_data(path, plt, got, base)
   return plt, got
 
 def entrypoint(path):
@@ -68,6 +121,7 @@ def entrypoint(path):
 
 class ELF:
   '''A parsed ELF file'''
+  cachedir = "cache" 
 
   def __init__(self, path, plt = True, base = 0x0):
     self.path = str(path)
@@ -93,7 +147,6 @@ class ELF:
 
     for (name, addr) in self.name2func.items():
       self.func2name[addr] = name
-
 
   def _load_sections(self):
     # -W : Wide output
