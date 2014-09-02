@@ -190,16 +190,25 @@ class Crash(Event):
     #print process.disassembleOne()
 
   def __str__(self):
-    #if self.faulty_addr is None:
     return "Crash@"+hex(self.eip)
-    #else:
-    #  return "Crash@"+hex(self.eip)+" -> "+hex(self.faulty_addr).replace("L", "")
 
   def GetTypedName(self):
-    if self.smashed_stack:
-      return ("vulnerable_crash", [self.eip[0]])
-    else: 
-      return ("crashed", [self.eip[0]])#, self.faulty_addr[0]])
+    #if self.smashed_stack:
+    #  return ("vulnerable_crash", [self.eip[0]])
+    #else: 
+    return ("crashed", [self.eip[0]])
+
+
+class Vulnerability(Event):
+  def __init__(self, vtype):
+    self.type = vtype
+    self.name = "Vulnerability "+str(vtype)+" detected"
+
+  def __str__(self):
+    return str(self.name)
+
+  def GetTypedName(self):
+    return ("Vulnerability", str(self.type))
 
 def hash_events(events):
   return hash(tuple(map(str, events)))
