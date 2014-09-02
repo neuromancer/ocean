@@ -66,7 +66,7 @@ class Call(Event):
     self.retvalue = RefinePType(GetPtype(self.ret),process.getreg("eax"), self.process, self.mm)
 
   def GetTypedName(self):
-    return (str(self.name), [self.retvalue[0]]+list(self.param_ptypes))
+    return (str(self.name), list(self.param_ptypes))
 
 class Signal(Event):
   def __init__(self, name, process, mm): #_sifields = None):
