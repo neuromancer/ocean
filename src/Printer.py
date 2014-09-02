@@ -4,7 +4,7 @@ import copy
 from numpy import zeros, savetxt
 
 #from src.Mutation import NullDeltaMutation 
-from src.Event    import Call, Crash, Abort, Exit, Signal, specs
+from src.Event    import Call, Crash, Abort, Exit, Signal, Vulnerability, specs
 from src.Types    import ptypes, isPtr, isNum, ptr32_ptypes, num32_ptypes, generic_ptypes
 
 """
@@ -176,9 +176,9 @@ class DataPrinter:
       (name, args) = event.GetTypedName()
 
       #r.add((name+":ret_addr",str(args[0])))
-      r.append((name+":ret_val",str(args[1])))
+      #r.append((name+":ret_val",str(args[0])))
 
-      for (index, arg) in enumerate(args[2:]):
+      for (index, arg) in enumerate(args[:]):
         r.append((name+":"+str(index),str(arg)))
         #print r
     elif isinstance(event, Abort):
@@ -192,6 +192,10 @@ class DataPrinter:
     elif isinstance(event, Crash):
       (name, fields) = event.GetTypedName()
       r.append((name+":eip",str(fields[0])))
+
+    elif isinstance(event, Vulnerability):
+      (name, fields) = event.GetTypedName()
+      r.append((name,str(fields[0])))
 
     elif isinstance(event, Signal):
       #assert(0)

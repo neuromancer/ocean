@@ -19,6 +19,7 @@ from time import sleep
 
 from Event import Exit, Abort, Timeout, Crash, Signal, Call, specs, hash_events
 
+from Vulnerabilities import detect_vulnerabilities
 from ELF import ELF
 from Run import Launch
 from MemoryMap import MemoryMaps
@@ -114,30 +115,31 @@ class Process(Application):
                   return []
 
                 elif name is None:
+                  assert(0)
                   #print "unhoking return address"
                   #last_call = self.events[-1]
-                  assert(self.last_call <> None)
+                  #assert(self.last_call <> None)
                   #print breakpoint.address, self.last_call.GetReturnAddr()
 
-                  breakpoint.desinstall(set_ip=True)
-                  if (breakpoint.address == self.last_call.GetReturnAddr()):
-                    self.last_call.DetectReturnValue(self.process)
-                  else:
-                    pass # FIXME: Why this could happen? setjmp/longjmp?
+                  #breakpoint.desinstall(set_ip=True)
+                  #if (breakpoint.address == self.last_call.GetReturnAddr()):
+                  #  self.last_call.DetectReturnValue(self.process)
+                  #else:
+                  #  pass # FIXME: Why this could happen? setjmp/longjmp?
 
-                  return []
+                  #return []
 
                 else:
                   call = Call(name, module) 
                   self.mm.update()
                   call.DetectParams(self.process, self.mm)
-                  self.last_call = call
+                  #self.last_call = call
                   #print "hooking return address"
-                  self.breakpoint(call.GetReturnAddr())
+                  #self.breakpoint(call.GetReturnAddr())
 
-                  breakpoint.desinstall(set_ip=True)
-                  self.process.singleStep()
-                  self.breakpoint(breakpoint.address)
+                  #breakpoint.desinstall(set_ip=True)
+                  #self.process.singleStep()
+                  #self.breakpoint(breakpoint.address)
 
                   return [call]
 
@@ -188,6 +190,9 @@ class Process(Application):
 
         return []
 
+    def DetectVulnerabilities(self, events):
+      return detect_vulnerabilities(events, self.process)
+
 
     def createProcess(self, cmd, envs, no_stdout):
 
@@ -196,6 +201,10 @@ class Process(Application):
         is_attached = True
 
         try:
+            #print "initial processes:"
+            #for p in self.debugger:
+            #  print "p:", p
+            #print "end processes"
             return self.debugger.addProcess(self.pid, is_attached=is_attached)
         except (ProcessExit, PtraceError), err:
             if isinstance(err, PtraceError) \
@@ -207,8 +216,8 @@ class Process(Application):
 
     def destroyProcess(self, signum, frame):
         assert(self.process is not None)
-        print signum
-        print frame
+        #print signum
+        #print frame
 
         #self.debugger.deleteProcess(self.process)
         #self.process.(SIGUSR2)
@@ -217,7 +226,6 @@ class Process(Application):
 
 
     def _continueProcess(self, process, signum=None):
-        #print "begin _cont", self.last_signal
         if not signum and process in self.last_signal:
             signum = self.last_signal[process]
 
@@ -232,7 +240,6 @@ class Process(Application):
             process.cont()
 
     def cont(self, signum=None):
-        #print "begin cont", signum
 
         for process in self.debugger:
             process.syscall_state.clear()
@@ -246,8 +253,9 @@ class Process(Application):
         signal = self.debugger.waitSignals()
         process = signal.process
         events = self.createEvents(signal)
+        vulns = self.DetectVulnerabilities(events)
 
-        self.events = self.events + events
+        self.events = self.events + events + vulns
 
 
     def readInstrSize(self, address, default_size=None):
@@ -317,10 +325,11 @@ class Process(Application):
               self.cont()
 
           #alarm(0)
-        except PtraceError:
+        #except PtraceError:
           #print "deb:",self.debugger, "crash:", self.crashed
-          alarm(0)
-          return        
+          #print "PtraceError"
+          #alarm(0)
+          #return        
 
         except ProcessExit, event:
           alarm(0)
