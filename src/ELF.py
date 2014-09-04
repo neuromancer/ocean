@@ -42,7 +42,7 @@ datadir = "../cache/"
 
 def _save_cached_data(path, plt, got, base):
   filename = realpath+"/"+datadir+"/"+str(path.replace("/","_"))
-  print "save",filename
+  #print "save",filename
   csvfile = open(filename+".plt", 'wb')
   writer = csv.writer(csvfile, delimiter='\t')
 
@@ -60,7 +60,7 @@ def _save_cached_data(path, plt, got, base):
 def _load_cached_data(path, plt, got, base):
   
   filename = realpath+"/"+datadir+"/"+str(path.replace("/","_"))
-  print "load", filename
+  #print "load", filename
   try: 
       csvfile = open(filename+".plt", 'rb')
   except IOError:
