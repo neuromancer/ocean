@@ -53,3 +53,5 @@ libjpeg.so.8
 libgif
 libsqlite
 libncurses.so
+libcrypto.so
+libssl.so
