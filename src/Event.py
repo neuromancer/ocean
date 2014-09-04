@@ -139,14 +139,14 @@ class Abort(Event):
 
 class Timeout(Event):
   def __init__(self, secs):
-    self.code = secs
+    self.secs = secs
     self.name = "Timeout "+str(secs)+" secs"
 
   def __str__(self):
     return str(self.name)
 
   def GetTypedName(self):
-    return ("Timeout", "unit")
+    return ("timeouted", ["()"])
 
 class Crash(Event):
 

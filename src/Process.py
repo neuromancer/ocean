@@ -23,9 +23,10 @@ from Vulnerabilities import detect_vulnerabilities
 from ELF import ELF
 from Run import Launch
 from MemoryMap import MemoryMaps
+from Alarm import TimeoutEx
 
 class Process(Application):
-    def __init__(self, program, envs, included_mods = [], ignored_mods = [], no_stdout = True):
+    def __init__(self, program, envs, timeout, included_mods = [], ignored_mods = [], no_stdout = True):
 
         Application.__init__(self)  # no effect
 
@@ -34,6 +35,7 @@ class Process(Application):
         #self.outdir = str(outdir)
         self.no_stdout = no_stdout
         self.envs = envs
+        self.timeout = timeout
 
         self.process = None
         self.included_mods = list(included_mods)
@@ -284,10 +286,18 @@ class Process(Application):
 
     def runProcess(self, cmd):
 
-        #print ".",
+        #print "Running", cmd
 
-        signal(SIGALRM, lambda s,a: ())
-        timeout = 100
+        def alarm_handler(signum, frame):
+          raise TimeoutEx
+
+        signal(SIGALRM, alarm_handler)
+        
+        if self.pid is None:
+          timeout = 10*self.timeout
+        else:
+          timeout = self.timeout
+
         alarm(timeout)
 
         # Create new process
@@ -297,13 +307,16 @@ class Process(Application):
             #print self.mm
             self.crashed = False
         except ChildError, err:
+            print "a"
             writeError(getLogger(), err, "Unable to create child process")
             return
         except OSError, err:
+            print "b"
             writeError(getLogger(), err, "Unable to create child process")
             return
 
         except IOError, err:
+            print "c"
             writeError(getLogger(), err, "Unable to create child process")
             return
 
@@ -337,6 +350,7 @@ class Process(Application):
           return
 
         except OSError:
+          print 
           self.events.append(Timeout(timeout))
           self.timeouts += 1
           return
@@ -346,10 +360,9 @@ class Process(Application):
           self.timeouts += 1
           return
 
-        #except TimeoutEx:
-        #   self.events.append(Timeout(timeout))
-        #   self.timeouts += 1
-        #   return
+        except TimeoutEx:
+           self.events.append(Timeout(timeout))
+           return
 
 
 

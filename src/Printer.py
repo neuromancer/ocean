@@ -4,7 +4,7 @@ import copy
 from numpy import zeros, savetxt
 
 #from src.Mutation import NullDeltaMutation 
-from src.Event    import Call, Crash, Abort, Exit, Signal, Vulnerability, specs
+from src.Event    import Call, Crash, Abort, Exit, Timeout, Signal, Vulnerability, specs
 from src.Types    import ptypes, isPtr, isNum, ptr32_ptypes, num32_ptypes, generic_ptypes
 
 """
@@ -197,6 +197,11 @@ class DataPrinter:
       (name, fields) = event.GetTypedName()
       r.append((name,str(fields[0])))
 
+    elif isinstance(event, Timeout):
+      #assert(0)
+      (name, fields) = event.GetTypedName()
+      r.append((name,str(())))
+
     elif isinstance(event, Signal):
       #assert(0)
       (name, fields) = event.GetTypedName()
@@ -291,4 +296,5 @@ class DataPrinter:
       print "\t"+str(self.original_class)+"\n",
     """
 
+    sys.stdout.flush()
     return

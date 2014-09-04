@@ -83,9 +83,8 @@ if __name__ == "__main__":
                         help="",
                         type=str, nargs='+', default=[])
 
-    parser.add_argument("--X-program", dest="envs",
-                        help="",
-                        action="store_const", const=dict(DISPLAY=":0"), default=dict())
+    parser.add_argument("--timeout", dest="timeout", type=int,
+                        help="Timeout (in seconds)", default=3)
 
     parser.add_argument("-n", dest="max_mut", type=int,
                         help="", default=0)
@@ -118,7 +117,8 @@ if __name__ == "__main__":
 
     os.chdir("crash")
 
-    envs = options.envs
+    timeout = options.timeout
+    envs = dict()
     args = GetArgs()
     files = GetFiles()
 
@@ -134,7 +134,7 @@ if __name__ == "__main__":
     expanded_input_generator = RandomInputMutator(args + files, RandomExpanderMutator)
     mutated_input_generator = RandomInputMutator(args + files, RandomByteMutator)
 
-    app = Process(program, envs, included_mods, ignored_mods, no_stdout = not show_stdout )
+    app = Process(program, envs, timeout, included_mods, ignored_mods, no_stdout = not show_stdout )
     
     prt = DataPrinter("/dev/stdout", program)
 
