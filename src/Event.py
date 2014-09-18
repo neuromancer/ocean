@@ -120,15 +120,20 @@ class Abort(Event):
     self.name = "Abort"
 
     self.bt =  process.getBacktrace(max_args=0, max_depth=20)
-    frames = self.bt.frames
+    #print self.bt, type(self.bt)
+    frames = []
 
-    for i,frame in enumerate(frames):
+    for i,frame in enumerate(self.bt.frames):
       r_type = RefinePType(Type("Ptr32",4), frame.ip, process, mm)
-      frames[i] = r_type
-      if str(r_type[0]) == "DPtr32":
-        frames = frames[:i+1]
-        break
+      frames.append(r_type)
 
+      if str(r_type[0]) == "DPtr32":
+        break
+ 
+    self.bt.frames = frames
+    #print "frames",frames
+    #print "self.bt.frames", self.bt.frames
+ 
     self.eip = RefinePType(Type("Ptr32",4), process.getInstrPointer(), process, mm)
 
   def __str__(self):
@@ -165,15 +170,17 @@ class Crash(Event):
     self.module = FindModule(process.getInstrPointer(),mm)
 
     self.bt =  process.getBacktrace(max_args=0, max_depth=20)
-    frames = self.bt.frames
-    for i,frame in enumerate(frames):
+    frames = []
+
+    for i,frame in enumerate(self.bt.frames):
       r_type = RefinePType(Type("Ptr32",4), frame.ip, process, mm)
-      frames[i] = r_type
+      frames.append(r_type)
       #print hex(r_type[1])
       if str(r_type[0]) == "DPtr32":
-        frames = frames[:i+1]
         break
-
+     
+     
+    self.bt.frames = frames
     self.eip = RefinePType(Type("Ptr32",4), process.getInstrPointer(), process, mm)
 
     #ins = Decode(self.eip, process.readBytes(self.eip, 8), Decode32Bits)[0]
@@ -194,7 +201,7 @@ class Crash(Event):
 
 class Vulnerability(Event):
   def __init__(self, vtype):
-    self.type = vtype
+    self.type = str(vtype)
     self.name = "Vulnerability "+str(vtype)+" detected"
 
   def __str__(self):

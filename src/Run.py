@@ -1,7 +1,7 @@
 # -- coding: utf-8 --
 
 #from ptrace.debugger.child import createChild
-from os import dup2, close, open as fopen, O_RDONLY
+from os import system, dup2, close, open as fopen, O_RDONLY
 from sys import stdin
 from os import (
     fork, execv, execve, getpid,
@@ -10,6 +10,7 @@ from os import (
 from ptrace.binding import ptrace_traceme
 from ptrace import PtraceError
 
+from resource import getrlimit, setrlimit, RLIMIT_AS
 fds = []
 c = 0
 
@@ -52,6 +53,9 @@ def createChild(arguments, no_stdout, env=None):
     if pid:
         return pid
     else:
+        #print "limit",getrlimit(RLIMIT_DATA)
+        setrlimit(RLIMIT_AS, (1024*1024*1024, -1))
+        #print "limit",getrlimit(RLIMIT_DATA)
 
         try:
           ptrace_traceme()

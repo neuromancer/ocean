@@ -294,7 +294,7 @@ class Process(Application):
         signal(SIGALRM, alarm_handler)
         
         if self.pid is None:
-          timeout = 10*self.timeout
+          timeout = 20*self.timeout
         else:
           timeout = self.timeout
 

@@ -1,7 +1,6 @@
 import sys
 import csv
 import copy
-from numpy import zeros, savetxt
 
 #from src.Mutation import NullDeltaMutation 
 from src.Event    import Call, Crash, Abort, Exit, Timeout, Signal, Vulnerability, specs

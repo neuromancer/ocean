@@ -14,20 +14,19 @@ def detect_vulnerability(event, process):
        pass    
 
     elif isinstance(event, Abort):
+      #print event.bt, type(event.bt)
       for (typ,val) in event.bt:
         if val == 0xb7f3f980: #__fortify_fail address
           return Vulnerability("StackCorruption")
-
-        if val == 0xb71be8ad: # crash inside cfree (free)
+        if val in [0xb71be8ad, 0xb7e788ad, 0xb7d998ad]: # crash inside cfree (free)
           return Vulnerability("HeapCorruption")
-
-
 
     elif isinstance(event, Crash):
 
-      for (typ,val) in event.bt:
+      for (typ,val) in event.bt:        
+        #print (typ,hex(val))
         if str(typ) == "DPtr32":
-          return Vulnerability("StackOverflow")
+          return Vulnerability("StackCorruption")
 
     elif isinstance(event, Signal):
       pass
