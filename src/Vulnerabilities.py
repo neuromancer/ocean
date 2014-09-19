@@ -24,8 +24,9 @@ def detect_vulnerability(event, process):
     elif isinstance(event, Crash):
 
       for (typ,val) in event.bt:        
-        #print (typ,hex(val))
+        print (typ,hex(val))
         if str(typ) == "DPtr32":
+          assert(0)
           return Vulnerability("StackCorruption")
 
     elif isinstance(event, Signal):

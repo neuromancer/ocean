@@ -2,6 +2,7 @@ from ptrace.ctypes_tools import bytes2word
 from Spec                import specs
 from Types import Type, GetPtype
 from Analysis import FindModule, RefinePType
+from Backtrace import getBacktrace
 
 #from distorm import Decode, Decode32Bits
 
@@ -169,7 +170,7 @@ class Crash(Event):
     #print "crash @",hex(process.getInstrPointer())
     self.module = FindModule(process.getInstrPointer(),mm)
 
-    self.bt =  process.getBacktrace(max_args=0, max_depth=20)
+    self.bt =  getBacktrace(process,max_args=10, max_depth=20)
     frames = []
 
     for i,frame in enumerate(self.bt.frames):
