@@ -2,7 +2,7 @@ from ptrace.ctypes_tools import bytes2word
 from Spec                import specs
 from Types import Type, GetPtype
 from Analysis import FindModule, RefinePType
-from Backtrace import getBacktrace
+from Backtrace import getBacktrace, Backtrace
 
 #from distorm import Decode, Decode32Bits
 
@@ -168,21 +168,33 @@ class Crash(Event):
     #    self.regs[name] = hex(value).replace("L","")
 
     #print "crash @",hex(process.getInstrPointer())
-    self.module = FindModule(process.getInstrPointer(),mm)
+    ip = process.getInstrPointer()
+    fp = process.getFramePointer()
 
-    self.bt =  getBacktrace(process,max_args=10, max_depth=20)
+    self.module = FindModule(ip,mm)
+    
+    self.fp_type = RefinePType(Type("Ptr32",4), fp, process, mm)
+ 
+    #print "fp:",hex(fp_type[1]), str(fp_type[0])
+    if not process.no_frame_pointer: #str(self.fp_type[0]) == "SPtr32": 
+      self.bt =  getBacktrace(process,max_args=0, max_depth=20)
+    else: 
+      self.bt = Backtrace()
     frames = []
 
     for i,frame in enumerate(self.bt.frames):
       r_type = RefinePType(Type("Ptr32",4), frame.ip, process, mm)
       frames.append(r_type)
-      #print hex(r_type[1])
-      if str(r_type[0]) == "DPtr32":
+      #print "ip:", str(r_type[0])
+      if not (str(r_type[0])  == "GxPtr32"):
         break
+
+      #if str(r_type[0]) == "DPtr32":
+      #  break
      
      
     self.bt.frames = frames
-    self.eip = RefinePType(Type("Ptr32",4), process.getInstrPointer(), process, mm)
+    self.eip_type = RefinePType(Type("Ptr32",4), process.getInstrPointer(), process, mm)
 
     #ins = Decode(self.eip, process.readBytes(self.eip, 8), Decode32Bits)[0]
     #self.address, self.size, self.text, self.hexa = ins
@@ -191,13 +203,13 @@ class Crash(Event):
     #print process.disassembleOne()
 
   def __str__(self):
-    return "Crash@"+hex(self.eip[1])+":"+str(self.eip[0])
+    return "Crash@"+hex(self.eip_type[1])+":"+str(self.eip_type[0])
 
   def GetTypedName(self):
     #if self.smashed_stack:
     #  return ("vulnerable_crash", [self.eip[0]])
     #else: 
-    return ("crashed", [self.eip[0]])
+    return ("crashed", [self.eip_type[0]])
 
 
 class Vulnerability(Event):

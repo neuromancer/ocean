@@ -51,7 +51,7 @@ ptypes = [Type("Num32",  4, None) ,
           Type("Ptr32",  4, None) , # Generic pointer
           Type("SPtr32", 4, None), # Stack pointer
           Type("HPtr32", 4, None), # Heap pointer
-          Type("LPtr32", 4, None), # Library pointer
+          Type("GxPtr32", 4, None), # Global eXecutable pointer
           Type("FPtr32", 4, None), # File pointer
           Type("NPtr32", 4, None), # NULL pointer
           Type("DPtr32", 4, None), # Dangling pointer

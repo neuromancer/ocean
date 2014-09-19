@@ -303,6 +303,7 @@ class Process(Application):
         # Create new process
         try:
             self.process = self.createProcess(cmd, self.envs, self.no_stdout)
+            self.process.no_frame_pointer = self.elf.no_frame_pointer
             #self.mm  = MemoryMaps(self.program, self.pid)
             #print self.mm
             self.crashed = False

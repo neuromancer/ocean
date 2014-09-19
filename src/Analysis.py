@@ -48,8 +48,8 @@ def RefinePType(ptype, value, process, mm):
         return (Type("SPtr32",4), ptr)
       elif mm.isHeapPtr(ptr):
         return (Type("HPtr32",4), ptr)
-      #elif mm.isLibPtr(ptr):
-      #  return (Type("LPtr32",4), ptr)
+      elif mm.isCodePtr(ptr):
+        return (Type("GxPtr32",4), ptr)
       elif mm.isFilePtr(ptr):
         return (Type("FPtr32",4), ptr)
       elif mm.isGlobalPtr(ptr):

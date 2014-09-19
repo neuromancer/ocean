@@ -33,6 +33,12 @@ class MemoryMaps:
           return zone == "[heap]"
     return False
 
+  def isCodePtr(self, ptr):
+    for (mrange,zone) in self.mm.items():
+      if ptr >= mrange[0] and ptr < mrange[1] and 'x' in self.atts[mrange]:
+          return True
+    return False
+
   def isLibPtr(self, ptr):
     for (mrange,zone) in self.mm.items():
       if ptr >= mrange[0] and ptr < mrange[1]:
@@ -58,6 +64,9 @@ class MemoryMaps:
 
     if update:
       self.update()
+    else:
+      return False
+
     return self.checkPtr(ptr, update=False)
 
   def findModule(self, ptr):

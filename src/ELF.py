@@ -119,6 +119,18 @@ def entrypoint(path):
 
     return entrypoint
 
+def no_frame_pointer(path):
+    cmd = [_READELF, '-hWS', path]
+    out = subprocess.check_output(cmd)
+
+    #elfclass = re.findall('Class:\s*(.*$)', out, re.MULTILINE)[0]
+    out = out.split('.eh_frame         PROGBITS        ')[1]
+    out = out.split(" ")[2]
+
+    return (int(out,16) > 4)
+
+
+
 class ELF:
   '''A parsed ELF file'''
   cachedir = "cache" 
@@ -129,6 +141,7 @@ class ELF:
     self.sections = dict()
 
     self.entrypoint = entrypoint(path)
+    self.no_frame_pointer = no_frame_pointer(path)
     #self._load_sections()
     
     
