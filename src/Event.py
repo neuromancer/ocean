@@ -226,6 +226,9 @@ class Vulnerability(Event):
 def hash_events(events):
   return hash(tuple(map(str, events)))
 
+def IsTimeout(event):
+  return isinstance(event, Timeout)
+
 # functions
 #all_events = dict(map(lambda x,y: (x,len(y)), specs.items()))
 

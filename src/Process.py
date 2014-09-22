@@ -334,6 +334,7 @@ class Process(Application):
            
             if not self.debugger or self.crashed:
                 # There is no more process: quit
+                alarm(0)
                 return
             else:
               self.cont()
@@ -351,17 +352,19 @@ class Process(Application):
           return
 
         except OSError:
-          print 
+          alarm(0)          
           self.events.append(Timeout(timeout))
           self.timeouts += 1
           return
 
         except IOError:
+          alarm(0)
           self.events.append(Timeout(timeout))
           self.timeouts += 1
           return
 
         except TimeoutEx:
+           
            self.events.append(Timeout(timeout))
            return
 

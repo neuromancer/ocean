@@ -35,6 +35,7 @@ from src.Process    import Process
 from src.Detection  import GetArgs, GetFiles, GetCmd, GetDir
 from src.Mutation   import NullMutator, RandomByteMutator, RandomExpanderMutator, RandomInputMutator
 from src.Printer    import DataPrinter
+from src.Event      import IsTimeout
 
 def readmodfile(modfile):
   hooked_mods = [] 
@@ -169,7 +170,8 @@ if __name__ == "__main__":
         events = app.getData(prepare_inputs(mutated))
         prt.print_events(d, events)
         #print(map(str,mutated))#, map(type, mutated))
-        mutated_inputs.append(mutated)
+        if not IsTimeout(events[-1]):
+          mutated_inputs.append(mutated)
 
     #assert(0)
     #print(mutated_inputs)
