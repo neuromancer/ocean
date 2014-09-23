@@ -119,8 +119,10 @@ class Exit(Event):
 class Abort(Event):
   def __init__(self, process, mm):
     self.name = "Abort"
+    ip = process.getInstrPointer()
 
     self.bt =  process.getBacktrace(max_args=0, max_depth=20)
+    self.module = FindModule(ip,mm)
     #print self.bt, type(self.bt)
     frames = []
 
@@ -135,7 +137,7 @@ class Abort(Event):
     #print "frames",frames
     #print "self.bt.frames", self.bt.frames
  
-    self.eip = RefinePType(Type("Ptr32",4), process.getInstrPointer(), process, mm)
+    self.eip = RefinePType(Type("Ptr32",4), ip, process, mm)
 
   def __str__(self):
     return str(self.name)

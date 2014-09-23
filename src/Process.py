@@ -193,7 +193,7 @@ class Process(Application):
         return []
 
     def DetectVulnerabilities(self, events):
-      return detect_vulnerabilities(events, self.process)
+      return detect_vulnerabilities(events, self.process, self.mm)
 
 
     def createProcess(self, cmd, envs, no_stdout):

@@ -1,11 +1,12 @@
 from src.Event    import Call, Crash, Abort, Exit, Signal, Vulnerability
+from Analysis import FindModule 
 
-def detect_vulnerabilities(events, process):
+def detect_vulnerabilities(events, process, mm):
 
-  r = map(lambda event: detect_vulnerability(event, process), events)
+  r = map(lambda event: detect_vulnerability(event, process, mm), events)
   return filter(lambda e: e is not None, r)
 
-def detect_vulnerability(event, process):
+def detect_vulnerability(event, process, mm):
  
     if isinstance(event, Call):
 
@@ -15,11 +16,31 @@ def detect_vulnerability(event, process):
 
     elif isinstance(event, Abort):
       #print event.bt, type(event.bt)
-      for (typ,val) in event.bt:
-        if val in [0xb7f3f980, 0xb7e0f980]: #__fortify_fail address
-          return Vulnerability("StackCorruption")
-        if val in [0xb71be8ad, 0xb7e788ad, 0xb7d998ad]: # crash inside cfree (free)
-          return Vulnerability("HeapCorruption")
+      #print "module:", hex(event.eip[1])
+      if len(event.bt) > 0:
+        for (typ, val) in event.bt:
+           module = FindModule(val, mm)
+           if module == "[vdso]":
+             pass
+           elif "libc-" in module:
+             return Vulnerability("MemoryCorruption")
+           else:
+             return None 
+           
+        #val = [None]
+        #ibt = iter(event.bt)
+        #ibt.next()
+        #(_, val) = ibt.next()
+
+        #print "val",hex(val)
+        #if "libc-" in FindModule(val, mm):
+        #  return Vulnerability("MemoryCorruption")
+ 
+      #for (typ,val) in event.bt:
+      #  if val in [0xb7f3f980, 0xb7e0f980]: #__fortify_fail address
+      #    return Vulnerability("StackCorruption")
+      #  if val in [0xb71be8ad, 0xb7e788ad, 0xb7d998ad]: # crash inside cfree (free)
+      #    return Vulnerability("HeapCorruption")
 
     elif isinstance(event, Crash):
 
