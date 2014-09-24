@@ -29,7 +29,7 @@ class Call(Event):
     #self.v = None
 
   def __str__(self):
-    return "call"
+    return str(self.name)
     
   def __DetectRetAddr__(self):
     addr = self.process.getreg("esp")

@@ -1,12 +1,16 @@
 from src.Event    import Call, Crash, Abort, Exit, Signal, Vulnerability
 from Analysis import FindModule 
 
-def detect_vulnerabilities(events, process, mm):
+def detect_vulnerabilities(preevents, events, process, mm):
 
-  r = map(lambda event: detect_vulnerability(event, process, mm), events)
+  r = []
+
+  for (i, event) in enumerate(events):  
+    r.append(detect_vulnerability(preevents, event, process, mm))
+
   return filter(lambda e: e is not None, r)
 
-def detect_vulnerability(event, process, mm):
+def detect_vulnerability(preevents, event, process, mm):
  
     if isinstance(event, Call):
 
@@ -17,9 +21,14 @@ def detect_vulnerability(event, process, mm):
     elif isinstance(event, Abort):
       #print event.bt, type(event.bt)
       #print "module:", hex(event.eip[1])
-      if len(event.bt) > 0:
+      if len(event.bt) > 0 and len(preevents) > 0:
+
+        if not (str(preevents[-1]) in ["free", "malloc", "realloc"]):
+          return None 
+
         for (typ, val) in event.bt:
            module = FindModule(val, mm)
+           #print str(preevents[-1]), "mod:",module
            if module == "[vdso]":
              pass
            elif "libc-" in module:

@@ -192,8 +192,8 @@ class Process(Application):
 
         return []
 
-    def DetectVulnerabilities(self, events):
-      return detect_vulnerabilities(events, self.process, self.mm)
+    def DetectVulnerabilities(self, preevents, events):
+      return detect_vulnerabilities(preevents, events, self.process, self.mm)
 
 
     def createProcess(self, cmd, envs, no_stdout):
@@ -255,7 +255,7 @@ class Process(Application):
         signal = self.debugger.waitSignals()
         process = signal.process
         events = self.createEvents(signal)
-        vulns = self.DetectVulnerabilities(events)
+        vulns = self.DetectVulnerabilities(self.events, events)
 
         self.events = self.events + events + vulns
 
