@@ -18,31 +18,11 @@ def check(f):
 check(_READELF)
 check(_OBJDUMP)
 
-# def symbols(file):
-#     import re, subprocess
-#     symbols = {}
-#     # -s : symbol table
-#     cmd = [_READELF, '-s', file]
-#     out = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
-#     field = '\s+(\S+)'
-#     lines = re.findall('^\s+\d+:' + field * 7 + '$', out, re.MULTILINE)
-#
-#     for addr, size, type, _bind, _vis, _ndx, name in lines:
-#         addr = int(addr, 16)
-#         size = int(size, 10)
-#         if addr <> 0 and name <> '':
-#             symbols[name] = {'addr': addr,
-#                              'size': size,
-#                              'type': type,
-#                              }
-#     return symbols
-
 realpath = os.path.dirname(os.path.realpath(__file__))
 datadir = "../cache/"
 
 def _save_cached_data(path, plt, got, base):
   filename = realpath+"/"+datadir+"/"+str(path.replace("/","_"))
-  #print "save",filename
   csvfile = open(filename+".plt", 'wb')
   writer = csv.writer(csvfile, delimiter='\t')
 
@@ -60,7 +40,6 @@ def _save_cached_data(path, plt, got, base):
 def _load_cached_data(path, plt, got, base):
   
   filename = realpath+"/"+datadir+"/"+str(path.replace("/","_"))
-  #print "load", filename
   try: 
       csvfile = open(filename+".plt", 'rb')
   except IOError:
@@ -89,7 +68,6 @@ def plt_got(path, base):
   if _load_cached_data(path, plt, got, base):
     return plt, got
 
-  #assert(0)
   cmd = [_OBJDUMP, '-d', path]
   out = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
   got32 = '[^j]*jmp\s+\*0x(\S+)'

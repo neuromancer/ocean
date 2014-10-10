@@ -34,7 +34,7 @@ import random
 from src.Process    import Process
 from src.Detection  import GetArgs, GetFiles, GetCmd, GetDir
 from src.Mutation   import NullMutator, RandomByteMutator, RandomExpanderMutator, RandomInputMutator
-from src.Printer    import DataPrinter
+from src.Printer    import TypePrinter
 from src.Event      import IsTimeout
 
 def readmodfile(modfile):
@@ -62,12 +62,10 @@ if __name__ == "__main__":
 
     # Random seed initialziation
     random.seed()
+    
     # Arguments
     parser = argparse.ArgumentParser(description='xxx')
     parser.add_argument("testcase", help="Testcase to use", type=str, default=None)
-    #parser.add_argument("mode", help="Print mode to use", type=str, default="split")
-    #
-    #parser.add_argument("outdir", help="Output directory to use", type=str, default=".")
     parser.add_argument("--show-stdout",
                         help="Don't use /dev/null as stdout/stderr, nor close stdout and stderr if /dev/null doesn't exist",
                         action="store_true", default=False)
@@ -99,7 +97,7 @@ if __name__ == "__main__":
     options = parser.parse_args()
     
     testcase = options.testcase
-    #print_mode = options.mode
+    
     filters = options.filter_by
     incmodfile = options.inc_mods
     ignmodfile = options.ign_mods
@@ -113,9 +111,6 @@ if __name__ == "__main__":
     os.chdir(GetDir(testcase))
     program = GetCmd(None)
 
-    #os.system('ldd '+program)
-    #exit(0)
-
     os.chdir("crash")
 
     timeout = options.timeout
@@ -126,18 +121,14 @@ if __name__ == "__main__":
     # modules to include or ignore
     included_mods = readmodfile(incmodfile)
     ignored_mods = readmodfile(ignmodfile) 
-     
-    #if modfile is not None:
-    #  hooked_mods =  open(modfile).read().split("\n")
-    #  hooked_mods = filter(lambda x: x <> '', hooked_mods) 
-    
+        
     original_inputs = RandomInputMutator(args + files, NullMutator)
     expanded_input_generator = RandomInputMutator(args + files, RandomExpanderMutator)
     mutated_input_generator = RandomInputMutator(args + files, RandomByteMutator)
 
     app = Process(program, envs, timeout, included_mods, ignored_mods, no_stdout = not show_stdout )
     
-    prt = DataPrinter("/dev/stdout", program)
+    prt = TypePrinter("/dev/stdout", program)
 
     # unchanged input
     null_mutt, original_input = original_inputs.next()
@@ -172,9 +163,6 @@ if __name__ == "__main__":
         #print(map(str,mutated))#, map(type, mutated))
         if not IsTimeout(events[-1]):
           mutated_inputs.append(mutated)
-
-    #assert(0)
-    #print(mutated_inputs)
 
     for _ in range(depth):
       for mutated_input in mutated_inputs:

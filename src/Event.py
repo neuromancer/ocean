@@ -25,8 +25,6 @@ class Call(Event):
     self.param_types = list(spec[1:])
     self.param_ptypes = []
     self.param_values = []
-    #self.dim = 256
-    #self.v = None
 
   def __str__(self):
     return str(self.name)
@@ -161,15 +159,6 @@ class Crash(Event):
   #relevant_regs_32 = ["eax","ebx","ecx","edx", "esp", "ebp", "esi", "edi"]
 
   def __init__(self, process, mm):
-    #self.raw_regs = process.getregs()
-    #self.regs = dict()
-    #for name, type in self.raw_regs._fields_:
-
-    #  if name in self.relevant_regs_32:
-    #    value = getattr(self.raw_regs, name)
-    #    self.regs[name] = hex(value).replace("L","")
-
-    #print "crash @",hex(process.getInstrPointer())
     ip = process.getInstrPointer()
     fp = process.getFramePointer()
 
@@ -198,19 +187,10 @@ class Crash(Event):
     self.bt.frames = frames
     self.eip_type = RefinePType(Type("Ptr32",4), process.getInstrPointer(), process, mm)
 
-    #ins = Decode(self.eip, process.readBytes(self.eip, 8), Decode32Bits)[0]
-    #self.address, self.size, self.text, self.hexa = ins
-    #print ins.operands
-
-    #print process.disassembleOne()
-
   def __str__(self):
     return "Crash@"+hex(self.eip_type[1])+":"+str(self.eip_type[0])
 
   def GetTypedName(self):
-    #if self.smashed_stack:
-    #  return ("vulnerable_crash", [self.eip[0]])
-    #else: 
     return ("crashed", [self.eip_type[0]])
 
 
@@ -230,14 +210,4 @@ def hash_events(events):
 
 def IsTimeout(event):
   return isinstance(event, Timeout)
-
-# functions
-#all_events = dict(map(lambda x,y: (x,len(y)), specs.items()))
-
-# termination
-#all_events[str(Crash())] = 'unit'
-#all_events[str(Abort())] = 'unit'
-
-
-
 
