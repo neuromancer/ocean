@@ -88,10 +88,10 @@ def plt_got(path, base):
   _save_cached_data(path, plt, got, base)
   return plt, got
 
-def load_plt_calls(path):
+def load_plt_calls(path, inss):
   cmd = [_OBJDUMP, '-d', '-j', ".text", path]
   raw_instructions = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
-  lines = re.findall('([a-fA-F0-9]+)\s+<([^@<]+)@plt>', raw_instructions)
+  lines = re.findall('([a-fA-F0-9]+)\s+((<([^@<]+)@plt>)|%s)' % "|".join(inss), raw_instructions)
   return lines
 
 def entrypoint(path):
