@@ -3,6 +3,8 @@ import csv
 import os
 import subprocess
 
+from Misc import parse_ldd_output, sh_string
+
 _READELF = '/usr/bin/readelf'
 _OBJDUMP = '/usr/bin/objdump'
 
@@ -91,8 +93,9 @@ def plt_got(path, base):
 def load_plt_calls(path, inss):
   cmd = [_OBJDUMP, '-d', '-j', ".text", path]
   raw_instructions = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
-  lines = re.findall('([a-fA-F0-9]+)\s+((<([^@<]+)@plt>)|%s)' % "|".join(inss), raw_instructions)
-  return lines
+  #lines = re.findall('([a-fA-F0-9]+)\s+((<([^@<]+)@plt>)|%s)' % "|".join(inss), raw_instructions)
+  #lines = re.findall('$', raw_instructions)
+  return raw_instructions
 
 def entrypoint(path):
     cmd = [_READELF, '-hWS', path]
@@ -144,6 +147,19 @@ class ELF:
 
     for (name, addr) in self.name2func.items():
       self.func2name[addr] = name
+
+
+  def _populate_libraries_ldd(self):
+    """
+    from pwntools
+    """
+    try:
+      cmd = '(ulimit -s unlimited; ldd %s > /dev/null && (LD_TRACE_LOADED_OBJECTS=1 %s || ldd %s)) 2>/dev/null'
+      arg = sh_string(self.path)
+      data = subprocess.check_output(cmd % (arg, arg, arg), shell = True)
+      self._libs = parse_ldd_output(data)
+    except subprocess.CalledProcessError:
+      self._libs = {}
 
   def _load_sections(self):
     # -W : Wide output
