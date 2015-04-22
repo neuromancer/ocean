@@ -42,7 +42,7 @@ if __name__ == "__main__":
                            "jnl", "jle", "jng", "jg",  "jnle", 
                            "jp", "jpe", "jnp", "jpo", "jcxz", "jecxz"]
 
-  ncond_control_flow_ins = ["ret","jmp","call"]
+  ncond_control_flow_ins = ["ret","jmp","call", "retq","jmp","callq"]
 
   control_flow_ins = cond_control_flow_ins + ncond_control_flow_ins
 
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     
       #print i+j,ins_nme, ins_jaddr
 
-      if ins_nme == 'call': # ordinary call
+      if ins_nme in ['call', 'callq']: # ordinary call
         #"addr", ins_jaddr
 
         if ins_jaddr == '':
@@ -166,14 +166,14 @@ if __name__ == "__main__":
           else:
             pass # ignored call
 
-      elif ins_nme == 'ret':
+      elif ins_nme in ['ret','retq']:
         break
       else:
         pass
         #print i+j,ins_nme, ins_jaddr
 
       #print j
-      if ins_nme == 'jmp':
+      if ins_nme == 'jmp' :
 
         if ins_jaddr in plt: # call equivalent using jmp
           r = r + " " + plt[jaddr]
