@@ -36,13 +36,15 @@ from src.Detection  import GetArgs, GetFiles, GetCmd, GetDir
 from src.Mutation   import NullMutator, RandomByteMutator, RandomExpanderMutator, RandomInputMutator
 from src.Printer    import TypePrinter
 from src.Event      import IsTimeout
+from src.Misc       import readmodfile
 
-def readmodfile(modfile):
+"""def readmodfile(modfile):
   hooked_mods = [] 
   if modfile is not None:
     hooked_mods =  open(modfile).read().split("\n")
     hooked_mods = filter(lambda x: x <> '', hooked_mods)
   return hooked_mods
+"""
 
 def prepare_inputs(inputs):
   r = []

@@ -27,12 +27,21 @@ import re
 
 from src.ELF  import ELF, load_plt_calls, plt_got
 from src.Spec import specs
-#from src.Misc import readmodfile
+from src.Misc import readmodfile
 
-if __name__ == "__main__":
+def extract_raw_static_features(elf, max_subtraces, max_explored_subtraces=10000, min_size=10):
 
-  
-  prog = sys.argv[1]
+  # plt is inverted
+  inv_plt = dict()
+
+  for func, addr in elf.plt.items():
+    if func in specs:  # external functions are discarded
+      inv_plt[addr] = func
+    #else:
+    #   print func, "discarded!"
+
+  elf.plt = inv_plt
+
   #outfile = sys.argv[2]
 
   cond_control_flow_ins = ["jo", "jno", "js", "jns", "je",
@@ -47,26 +56,17 @@ if __name__ == "__main__":
   control_flow_ins = cond_control_flow_ins + ncond_control_flow_ins
 
   #csv_writer = csv.writer(open(outfile,"a+"), delimiter="\t")
-  plt, _ = plt_got(prog,0x0)
+  #plt, _ = plt_got(prog,0x0)
 
-  # plt is inverted
-  inv_plt = dict()
-
-  for func, addr in plt.items():
-    if func in specs:  # external functions are discarded
-      inv_plt[addr] = func
-    #else:
-    #   print func, "discarded!"
-
-  plt = inv_plt
-
-  inss = load_plt_calls(prog, control_flow_ins)
+  inss = load_plt_calls(elf.path, control_flow_ins)
   useful_inss_list = []
   useful_inss_dict = dict() 
   libc_calls = []
-  #labels = dict()
+  labels = dict()
 
   #print sys.argv[1]+"\t",
+  rclass = str(1)
+
   for i,ins in enumerate(inss.split("\n")):
 
     # prefix removal
@@ -79,6 +79,8 @@ if __name__ == "__main__":
     #print pins,ins_addr
 
     if len(pins) == 1 and ">" in ins: #label
+      #print ins
+      #assert(0)
       x = pins[0].split(" ")
 
       ins_addr = x[0]
@@ -109,7 +111,7 @@ if __name__ == "__main__":
       if "call" in pins[2]:
         if ins_jaddr <> '':
           func_addr = int(ins_jaddr,16)
-          if func_addr in plt:
+          if func_addr in elf.plt:
             libc_calls.append(i)
 
     else: # all other instructions 
@@ -121,9 +123,10 @@ if __name__ == "__main__":
   #print useful_inss_list
   max_inss = len(useful_inss_list)
   traces = set()
+  print elf.path+"\t",
 
   # exploration time!
-  while(True):
+  for _ in range(max_explored_subtraces):
 
     # resuling (sub)trace
     r = ""
@@ -131,14 +134,14 @@ if __name__ == "__main__":
     i = random.choice(libc_calls)
     j = 0
 
-    r = prog+"\t"
+    #r = elf.path+"\t"
+    r = ""
 
     while True:
 
       # last instruction case
       if (i+j) == max_inss:
         break
-
 
       _,ins_addr,ins_nme,ins_jaddr = useful_inss_list[i+j]
     
@@ -151,14 +154,15 @@ if __name__ == "__main__":
           break # parametric jmp, similar to ret for us
 
         ins_jaddr = int(ins_jaddr,16)
-        if ins_jaddr in plt:
-          r = r + " " + plt[ins_jaddr]
-          if plt[ins_jaddr] == "exit":
+        if ins_jaddr in elf.plt:
+          r = r + " " + elf.plt[ins_jaddr]
+          if elf.plt[ins_jaddr] == "exit":
             break
         else:
 
           if ins_jaddr in useful_inss_dict:
-            r = r + " " + hex(ins_jaddr)
+            #assert(0)
+            #r = r + " " + hex(ins_jaddr)
             i,_,_,_ = useful_inss_dict[ins_jaddr]
             j = 0
             continue
@@ -175,8 +179,8 @@ if __name__ == "__main__":
       #print j
       if ins_nme == 'jmp' :
 
-        if ins_jaddr in plt: # call equivalent using jmp
-          r = r + " " + plt[jaddr]
+        if ins_jaddr in elf.plt: # call equivalent using jmp
+          r = r + " " + elf.plt[jaddr]
         
         else:
           
@@ -185,7 +189,7 @@ if __name__ == "__main__":
 
           ins_jaddr = int(ins_jaddr,16)
           if ins_jaddr in useful_inss_dict:
-            r = r + " " + hex(ins_jaddr)
+            #r = r + " " + hex(ins_jaddr)
             i,_,_,_ = useful_inss_dict[ins_jaddr]
             j = 0
             continue
@@ -207,32 +211,46 @@ if __name__ == "__main__":
           continue
    
       j = j + 1
-
+    
+    #r = r + "\t"+rclass
     x = hash(r)
+    size = len(r.split(" "))-1
 
-    if x not in traces:
-      print r
+    if x not in traces and size >= min_size:
+      print r+" .",
       traces.add(x)
+      if len(traces) >= max_subtraces:
+        break
 
     sys.stdout.flush()
+  print "\t"+rclass
 
 
-  #explore(ri, useful_inss_list, useful_inss_dict)
+if __name__ == "__main__":
 
-  #for i in range(ri, ri + 30):
-  #  print i,useful_inss_list[i]
+  
+  prog = sys.argv[1]
+  ignored_mods = None
 
-  #for addr,(ins,jaddr) in useful_inss.items():
-  #  if ins is not None:
-  #    print addr+": "+ins+" -> "+jaddr
+  if len(sys.argv) == 3:
+    ignored_mods = readmodfile(sys.argv[2]) 
+  elif len(sys.argv) > 3 or len(sys.argv) < 2:
+    sys.exit(-1)
 
-  #print libc_calls
-  #print useful_inss[libc_calls[20]]
-  #print useful_inss[20]
+  elf = ELF(prog)
+  extract_raw_static_features(elf, 100)
 
-  #csv_writer.writerow([prog," ".join(r)])
-  #elf = ELF(sys.argv[1])
-  #elf._load_sections()
-  #elf._load_instructions()
-  #print elf.raw_instructions
+  #if ignored_mods is not None:
+  
+  #  elf._populate_libraries_ldd()
+  #  libs = filter(lambda mod: not (any(map(lambda l: l in mod, ignored_mods))),  elf._libs.keys())
+
+  #  #print libs
+  #  for lib in libs:
+  #     elf = ELF(lib)
+  #     extract_raw_static_features(elf, 1000)
+ 
+  #print dependencies
+  #assert(0)
+
 

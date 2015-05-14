@@ -30,6 +30,7 @@ def detect_vulnerability(preevents, event, process, mm):
            if module == "[vdso]":
              pass
            elif "libc-" in module:
+             assert(0)
              return Vulnerability("MemoryCorruption")
            else:
              return None 
